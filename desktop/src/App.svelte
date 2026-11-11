@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { api, isLoggedIn, setToken } from './lib/api.js';
-  import { app, go, loadMe, updateLocation } from './lib/state.svelte.js';
+  import { app, go, loadCounts, loadMe, updateLocation } from './lib/state.svelte.js';
   import Login from './pages/Login.svelte';
   import Feed from './pages/Feed.svelte';
   import Discover from './pages/Discover.svelte';
@@ -25,11 +25,20 @@
   // páginas de detalhe deixam o item de origem marcado
   const section = $derived(app.page === 'dog' ? 'dogs' : app.page === 'owner' ? 'matches' : app.page);
 
-  onMount(async () => {
-    if (isLoggedIn()) {
-      await loadMe();
-      updateLocation();
-    }
+  onMount(() => {
+    (async () => {
+      if (isLoggedIn()) {
+        await loadMe();
+        updateLocation();
+      }
+    })();
+    // conteúdo sempre fresco: o contador de pedidos é atualizado a cada 20 s
+    const timer = setInterval(() => app.me && loadCounts(), 20_000);
+    return () => clearInterval(timer);
+  });
+  $effect(() => {
+    app.page; // recarrega o contador ao trocar de página
+    if (app.me) loadCounts();
   });
 
   async function logout() {
@@ -45,10 +54,14 @@
 {:else}
   <div class="layout">
     <nav>
-      <div class="brand"><Icon name="pets" filled size={28} /> All Love</div>
+      <div class="brand">
+        <span class="logo shape-cookie9"><Icon name="pets" filled size={26} /></span>
+        <span class="display">All Love</span>
+      </div>
       {#each menu as [page, icon, label]}
         <button class="item" class:active={section === page} onclick={() => go(page)}>
-          <Icon name={icon} filled={section === page} /> <span>{label}</span>
+          <Icon name={icon} filled={section === page} /> <span class="grow label">{label}</span>
+          {#if page === 'matches' && app.counts.requests}<span class="badge">{app.counts.requests}</span>{/if}
         </button>
       {/each}
       {#if app.me.is_admin}
@@ -101,10 +114,22 @@
     align-items: center;
     gap: 12px;
     color: var(--md-primary);
-    font-size: 22px;
-    line-height: 28px;
-    padding: 16px 16px 20px;
+    font-size: 30px;
+    line-height: 34px;
+    padding: 12px 12px 24px;
   }
+  .logo {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    animation: spin 18s linear infinite;
+  }
+  .logo :global(.icon) { animation: spin 18s linear infinite reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .label { text-align: left; }
   .item {
     height: 56px;
     border: none;
@@ -115,7 +140,9 @@
     color: var(--md-on-surface-variant);
   }
   .item :global(.icon) { font-size: 24px; margin: 0; }
-  .item.active { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .item { font-size: 15px; transition: background 0.2s, transform 0.2s; }
+  .item:hover { transform: translateX(4px); }
+  .item.active { background: var(--md-primary-container); color: var(--md-on-primary-container); font-weight: 700; }
   nav hr { margin: 8px 16px; }
   .who { color: var(--md-on-surface-variant); padding: 0 16px 8px; font-size: 14px; }
   main { flex: 1; padding: 16px 32px 32px; max-width: 1040px; min-width: 0; }
@@ -155,6 +182,8 @@
     .brand, .who, .grow, nav hr { display: none; }
     .item { flex: 1; flex-direction: column; height: 52px; padding: 0 4px; gap: 4px; font-size: 12px; border-radius: 16px; min-width: 64px; }
     .item.active { background: transparent; }
-    .item.active :global(.icon) { background: var(--md-secondary-container); border-radius: 16px; padding: 4px 20px; }
+    .item.active :global(.icon) { background: var(--md-primary-container); border-radius: 16px; padding: 4px 20px; }
+    .item .badge { position: absolute; top: 2px; right: 12px; }
+    .item:hover { transform: none; }
   }
 </style>

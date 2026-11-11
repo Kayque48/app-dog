@@ -40,8 +40,8 @@
   {#if list.length}
     <h2>{title}</h2>
     {#each list as m (m.id)}
-      <div class="card outlined row wrap">
-        <DogAvatar photo={m.other_dog.photo_url} size={56} />
+      <div class="card row wrap rise" class:incoming={m.status === 'pending' && m.direction === 'incoming'} class:matched={m.status === 'accepted'}>
+        <span class="shape-cookie9 av"><DogAvatar photo={m.other_dog.photo_url} size={72} /></span>
         <div class="grow">
           <button class="link" onclick={() => go('dog', m.other_dog.id)}>{m.other_dog.name}</button>
           <span class="muted">· {m.other_dog.breed}</span><br />
@@ -66,4 +66,10 @@
 
 <style>
   .row .chip { margin: 0; }
+  .card { box-shadow: none; background: var(--md-surface-container-low); }
+  .av { display: grid; width: 72px; height: 72px; }
+  .incoming { background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-radius: 48px 48px 48px 12px; }
+  .incoming .muted { color: inherit; }
+  .matched { background: var(--md-primary-container); color: var(--md-on-primary-container); border-radius: 12px 48px 48px 48px; }
+  .matched .muted { color: inherit; }
 </style>

@@ -6,6 +6,7 @@ export const app = $state({
   page: 'feed', // feed | discover | matches | places | dogs | dog | owner | profile | admin
   param: null, // id do cão ou do dono nas páginas de detalhe
   toast: null,
+  counts: { requests: 0 }, // pedidos de encontro esperando resposta (badge no menu)
 });
 
 export function go(page, param = null) {
@@ -50,4 +51,14 @@ export function updateLocation() {
       { timeout: 8000 },
     );
   });
+}
+
+/** Atualiza os contadores do menu (pedidos de encontro recebidos). */
+export async function loadCounts() {
+  try {
+    const items = await api('GET', '/matches');
+    app.counts.requests = items.filter((m) => m.status === 'pending' && m.direction === 'incoming').length;
+  } catch {
+    /* sem conexão: mantém o último valor */
+  }
 }

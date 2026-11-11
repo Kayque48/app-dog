@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../models.dart';
+import '../main.dart' show display, likeYellow;
 import '../widgets.dart';
 import 'dog_detail_screen.dart';
 
@@ -19,6 +20,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Dog? _myDog;
   List<Dog> _cards = [];
   int _radius = 500;
+  int _seen = 0; // quantos cartões já passaram
   bool _loading = true;
   String? _blocked; // mensagem quando o cão está bloqueado (vacinas) ou sem localização
 
@@ -65,20 +67,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Future<void> _swipe(Dog other, bool liked) async {
-    setState(() => _cards.remove(other));
+    setState(() {
+      _cards.remove(other);
+      _seen++;
+    });
     try {
       final r = await Api.instance.post('/swipes', {'from_dog_id': _myDog!.id, 'to_dog_id': other.id, 'liked': liked});
       if (!mounted) return;
       if (r['matched'] == true) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Encontro combinado! 🐾'),
-            content: Text(
-              '${_myDog!.name} e ${other.name} querem se conhecer. '
-              'Veja o contato do dono na aba Encontros.',
-            ),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Oba!'))],
+        Navigator.of(context).push(
+          PageRouteBuilder(
+            opaque: false,
+            pageBuilder: (_, _, _) => MatchScreen(mine: _myDog!, other: other),
+            transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
           ),
         );
       } else if (liked) {
@@ -91,44 +92,56 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Descobrir')),
-      body: Constrained(
-        maxWidth: 520,
-        child: Column(
-          children: [
-            if (_myDogs.length > 1)
+      body: SafeArea(
+        child: Constrained(
+          maxWidth: 520,
+          child: Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: DropdownButtonFormField<int>(
-                  initialValue: _myDog?.id,
-                  decoration: const InputDecoration(labelText: 'Procurar amigos para'),
-                  items: [for (final d in _myDogs) DropdownMenuItem(value: d.id, child: Text(d.name))],
-                  onChanged: (id) {
-                    _myDog = _myDogs.firstWhere((d) => d.id == id);
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('Descobrir', style: display(Theme.of(context).textTheme.displaySmall))),
+                    if (_cards.isNotEmpty)
+                      Chip(
+                        backgroundColor: scheme.secondaryContainer,
+                        avatar: Icon(Icons.pets, color: scheme.onSecondaryContainer),
+                        label: Text('${_cards.length} por perto'),
+                      ),
+                  ],
+                ),
+              ),
+              if (_myDogs.length > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _myDog?.id,
+                    decoration: const InputDecoration(labelText: 'Procurar amigos para'),
+                    items: [for (final d in _myDogs) DropdownMenuItem(value: d.id, child: Text(d.name))],
+                    onChanged: (id) {
+                      _myDog = _myDogs.firstWhere((d) => d.id == id);
+                      _loadCards();
+                    },
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: SegmentedButton<int>(
+                  segments: [
+                    for (final r in [500, 1000, 3000]) ButtonSegment(value: r, label: Text('Até ${formatDistance(r)}')),
+                  ],
+                  selected: {_radius},
+                  onSelectionChanged: (s) {
+                    _radius = s.first;
                     _loadCards();
                   },
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (final r in [500, 1000, 3000])
-                    ChoiceChip(
-                      label: Text('Até ${formatDistance(r)}'),
-                      selected: _radius == r,
-                      onSelected: (_) {
-                        _radius = r;
-                        _loadCards();
-                      },
-                    ),
-                ],
-              ),
-            ),
-            Expanded(child: _body()),
-          ],
+              Expanded(child: _body()),
+            ],
+          ),
         ),
       ),
     );
@@ -141,7 +154,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
     if (_blocked != null) {
       return EmptyState(
-        icon: Icons.vaccines,
+        icon: _blocked!.contains('localização') ? Icons.location_off : Icons.vaccines,
         text: _blocked!,
         action: FilledButton(
           onPressed: () async {
@@ -155,41 +168,69 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
     if (_cards.isEmpty) {
       return EmptyState(
-        icon: Icons.search,
-        text: 'Nenhum cão novo por perto agora. Tente aumentar a distância.',
-        action: OutlinedButton(onPressed: _loadCards, child: const Text('Atualizar')),
+        icon: Icons.search_off,
+        text: _seen > 0
+            ? 'Você viu $_seen ${_seen == 1 ? 'cão' : 'cães'}! Tente aumentar a distância.'
+            : 'Nenhum cão novo por perto agora. Tente aumentar a distância.',
+        action: FilledButton.icon(
+          onPressed: () {
+            _radius = 3000;
+            _loadCards();
+          },
+          icon: const Icon(Icons.travel_explore),
+          label: const Text('Procurar até 3 km'),
+        ),
       );
     }
     final dog = _cards.first;
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         Expanded(
           child: Dismissible(
             key: ValueKey(dog.id),
             onDismissed: (dir) => _swipe(dog, dir == DismissDirection.startToEnd),
-            background: _swipeHint(Icons.favorite, successColor(context), Alignment.centerLeft),
-            secondaryBackground: _swipeHint(Icons.close, Theme.of(context).colorScheme.error, Alignment.centerRight),
-            child: _DogCard(dog: dog),
+            background: _swipeHint('QUERO!', likeYellow, const Color(0xFF231B00), Alignment.centerLeft, -0.2),
+            secondaryBackground: _swipeHint(
+              'PASSA',
+              scheme.inverseSurface,
+              scheme.onInverseSurface,
+              Alignment.centerRight,
+              0.2,
+            ),
+            child: _DogCard(dog: dog, shape: Shapes.all[_seen % 4]),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              FloatingActionButton.large(
-                heroTag: 'pass',
-                backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-                onPressed: () => _swipe(dog, false),
-                child: const Icon(Icons.close, size: 40),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 64),
+                    backgroundColor: scheme.inverseSurface,
+                    foregroundColor: scheme.onInverseSurface,
+                    textStyle: display(Theme.of(context).textTheme.titleLarge),
+                  ),
+                  onPressed: () => _swipe(dog, false),
+                  icon: const Icon(Icons.close, size: 28),
+                  label: const Text('Passa'),
+                ),
               ),
-              FloatingActionButton.large(
-                heroTag: 'like',
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                onPressed: () => _swipe(dog, true),
-                child: const Icon(Icons.favorite, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 64),
+                    backgroundColor: likeYellow,
+                    foregroundColor: const Color(0xFF231B00),
+                    textStyle: display(Theme.of(context).textTheme.titleLarge),
+                  ),
+                  onPressed: () => _swipe(dog, true),
+                  icon: const Icon(Icons.favorite, size: 28),
+                  label: const Text('Quero!'),
+                ),
               ),
             ],
           ),
@@ -198,62 +239,242 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _swipeHint(IconData icon, Color color, Alignment align) => Container(
+  Widget _swipeHint(String text, Color bg, Color fg, Alignment align, double angle) => Container(
     alignment: align,
     padding: const EdgeInsets.symmetric(horizontal: 32),
-    child: Icon(icon, color: color, size: 64),
+    child: Transform.rotate(
+      angle: angle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+        child: Text(text, style: display(Theme.of(context).textTheme.headlineMedium)?.copyWith(color: fg)),
+      ),
+    ),
   );
 }
 
 class _DogCard extends StatelessWidget {
-  const _DogCard({required this.dog});
+  const _DogCard({required this.dog, required this.shape});
   final Dog dog;
+  final ShapeBorder shape;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      clipBehavior: Clip.antiAlias,
-      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(48)),
+      color: scheme.surfaceContainerLow,
+      elevation: 3,
       child: InkWell(
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: dog.id))),
         child: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
-            DogPhoto(photoUrl: dog.photoUrl, height: 280),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (dog.wantsToMeetYou)
-                    Chip(
-                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                      avatar: const Icon(Icons.favorite),
-                      label: const Text('Quer conhecer o seu cão!'),
-                    ),
-                  Text('${dog.name}, ${dog.ageText}', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                  Text('${dog.breed} • ${sexes[dog.sex]} • a ${formatDistance(dog.distanceM ?? 0)}'),
-                  Text('Dono(a): ${dog.ownerFirstName}'),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      Chip(label: Text(temperaments[dog.temperament] ?? dog.temperament)),
-                      Chip(
-                        avatar: Icon(dog.bites ? Icons.warning : Icons.check, size: 18),
-                        label: Text(dog.bites ? 'Pode morder' : 'Não morde'),
-                      ),
-                      if (dog.inHeat) const Chip(avatar: Icon(Icons.info, size: 18), label: Text('No cio')),
-                      const Chip(avatar: Icon(Icons.vaccines, size: 18), label: Text('Vacinas em dia')),
-                    ],
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Center(
+                  child: ShapedDog(photoUrl: dog.photoUrl, shape: shape, size: 260),
+                ),
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  child: Chip(
+                    backgroundColor: scheme.secondaryContainer,
+                    avatar: Icon(Icons.near_me, color: scheme.onSecondaryContainer),
+                    label: Text(formatDistance(dog.distanceM ?? 0)),
                   ),
-                  if (dog.likes.isNotEmpty) ...[const SizedBox(height: 8), Text('Gosta de: ${dog.likes}')],
-                  if (dog.dislikes.isNotEmpty) Text('Não gosta de: ${dog.dislikes}'),
-                  const SizedBox(height: 8),
-                  Text('Toque para ver o perfil completo', style: t.bodySmall),
-                ],
+                ),
+                if (dog.wantsToMeetYou)
+                  Positioned(
+                    right: -4,
+                    top: 8,
+                    child: Transform.rotate(
+                      angle: 0.1,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: const BoxDecoration(
+                          color: likeYellow,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                            bottomLeft: Radius.circular(24),
+                            bottomRight: Radius.circular(4),
+                          ),
+                        ),
+                        child: const Text(
+                          '💛 Quer te conhecer!',
+                          style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF231B00)),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(dog.name, style: display(t.displayMedium)?.copyWith(color: scheme.primary)),
+            Text(
+              '${dog.ageText} · ${dog.breed} · ${sexes[dog.sex]} · dono(a) ${dog.ownerFirstName}',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.mood, size: 18),
+                  label: Text(temperaments[dog.temperament] ?? dog.temperament),
+                ),
+                Chip(
+                  backgroundColor: dog.bites ? scheme.errorContainer : null,
+                  avatar: Icon(dog.bites ? Icons.warning : Icons.check_circle, size: 18),
+                  label: Text(dog.bites ? 'Pode morder' : 'Não morde'),
+                ),
+                if (dog.inHeat) const Chip(avatar: Icon(Icons.info, size: 18), label: Text('No cio')),
+                Chip(
+                  backgroundColor: scheme.primaryContainer,
+                  avatar: const Icon(Icons.vaccines, size: 18),
+                  label: const Text('Vacinas em dia'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (dog.likes.isNotEmpty)
+                  Expanded(
+                    child: _LikeBox(title: 'AMA', text: dog.likes, love: true),
+                  ),
+                if (dog.likes.isNotEmpty && dog.dislikes.isNotEmpty) const SizedBox(width: 8),
+                if (dog.dislikes.isNotEmpty)
+                  Expanded(
+                    child: _LikeBox(title: 'ODEIA', text: dog.dislikes, love: false),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LikeBox extends StatelessWidget {
+  const _LikeBox({required this.title, required this.text, required this.love});
+  final String title;
+  final String text;
+  final bool love;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: love ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(20),
+          topRight: const Radius.circular(20),
+          bottomLeft: Radius.circular(love ? 6 : 20),
+          bottomRight: Radius.circular(love ? 20 : 6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+          Text(text),
+        ],
+      ),
+    );
+  }
+}
+
+/// Comemoração do match: confete nas cores que o cachorro enxerga.
+class MatchScreen extends StatefulWidget {
+  const MatchScreen({super.key, required this.mine, required this.other});
+  final Dog mine;
+  final Dog other;
+
+  @override
+  State<MatchScreen> createState() => _MatchScreenState();
+}
+
+class _MatchScreenState extends State<MatchScreen> with SingleTickerProviderStateMixin {
+  late final _anim = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(colors: [Color(0xFF5C4FD6), Color(0xFF0B1A7A)], radius: 1.1),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _anim,
+                builder: (_, _) => CustomPaint(
+                  painter: _ConfettiPainter(_anim.value, [
+                    scheme.primary,
+                    likeYellow,
+                    scheme.tertiary,
+                    scheme.primaryContainer,
+                  ]),
+                ),
+              ),
+            ),
+            Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutBack,
+                builder: (context, v, child) => Transform.scale(scale: v, child: child),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Deu match!',
+                      style: display(Theme.of(context).textTheme.displayLarge)?.copyWith(color: likeYellow),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ShapedDog(photoUrl: widget.mine.photoUrl, shape: Shapes.cookie9, size: 130),
+                        const Icon(Icons.favorite, color: likeYellow, size: 48),
+                        ShapedDog(photoUrl: widget.other.photoUrl, shape: Shapes.flower, size: 130),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '${widget.mine.name} e ${widget.other.name} querem se conhecer.',
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: likeYellow,
+                        foregroundColor: const Color(0xFF231B00),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.pets),
+                      label: const Text('Oba! Ver contato em Encontros'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -261,4 +482,29 @@ class _DogCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ConfettiPainter extends CustomPainter {
+  _ConfettiPainter(this.t, this.colors);
+  final double t;
+  final List<Color> colors;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < 40; i++) {
+      final x = ((i * 37) % 100) / 100 * size.width;
+      final y = ((t + (i % 9) / 9) % 1) * (size.height + 40) - 20;
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate((t * 6 + i) % 6.28);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(const Rect.fromLTWH(-5, -8, 10, 16), const Radius.circular(3)),
+        Paint()..color = colors[i % colors.length],
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.t != t;
 }

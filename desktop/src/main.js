@@ -3,6 +3,8 @@ import { mount } from 'svelte';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import 'material-symbols/rounded.css';
+import '@fontsource-variable/bricolage-grotesque';
+import './shapes.css';
 import './app.css';
 import App from './App.svelte';
 

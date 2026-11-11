@@ -45,11 +45,70 @@ Future<Position?> updateMyLocation(BuildContext context) async {
   }
 }
 
-/// Cor de "deu certo" (o Material 3 não tem uma cor de sucesso no esquema padrão).
-Color successColor(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark ? const Color(0xFFA3D69F) : const Color(0xFF2E6B30);
-Color successContainer(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1D5220) : const Color(0xFFC8F0C4);
+/// "Deu certo" em azul: o cão não enxerga verde.
+Color successColor(BuildContext context) => Theme.of(context).colorScheme.primary;
+Color successContainer(BuildContext context) => Theme.of(context).colorScheme.primaryContainer;
+
+/// Formas do Material 3 Expressive (cookie, flor e "blob").
+abstract final class Shapes {
+  static const cookie9 = StarBorder(points: 9, innerRadiusRatio: 0.84, pointRounding: 0.5, valleyRounding: 0.5);
+  static const cookie12 = StarBorder(points: 12, innerRadiusRatio: 0.88, pointRounding: 0.5, valleyRounding: 0.5);
+  static const flower = StarBorder(points: 6, innerRadiusRatio: 0.72, pointRounding: 0.7, valleyRounding: 0.3);
+  static const blob = StarBorder(
+    points: 3,
+    innerRadiusRatio: 0.78,
+    pointRounding: 0.5,
+    valleyRounding: 0.5,
+    rotation: 20,
+  );
+  static const all = [cookie9, flower, cookie12, blob];
+}
+
+/// Recorta o filho numa forma expressiva.
+class Shaped extends StatelessWidget {
+  const Shaped({super.key, required this.shape, required this.child, this.size});
+  final ShapeBorder shape;
+  final Widget child;
+  final double? size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: ClipPath(
+      clipper: ShapeBorderClipper(shape: shape),
+      child: child,
+    ),
+  );
+}
+
+/// Foto (ou pata) do cão recortada numa forma, usada em stories e cartões.
+class ShapedDog extends StatelessWidget {
+  const ShapedDog({super.key, required this.photoUrl, required this.shape, this.size = 72});
+  final String? photoUrl;
+  final ShapeBorder shape;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final url = Api.imageUrl(photoUrl);
+    final paw = Icon(Icons.pets, size: size * 0.45, color: scheme.onPrimaryContainer);
+    return Shaped(
+      shape: shape,
+      size: size,
+      child: ColoredBox(
+        color: scheme.primaryContainer,
+        child: url == null
+            ? Center(child: paw)
+            : Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Center(child: paw),
+              ),
+      ),
+    );
+  }
+}
 
 class DogAvatar extends StatelessWidget {
   const DogAvatar({super.key, required this.photoUrl, this.radius = 24});

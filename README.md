@@ -16,7 +16,9 @@ Os dois apps falam com a mesma API, então quem usa o celular encontra quem usa 
 
 O desktop também tem o painel de **Moderação**, que aparece só para administradores.
 
-Os dois apps seguem o **Material 3**. As cores são geradas a partir do azul fraquinho pedido pelo cliente (`#7EB6E6`), com tema claro e escuro. No Flutter isso vem do `ColorScheme.fromSeed`; no desktop, de tokens CSS gerados com o `@material/material-color-utilities`, com ícones Material Symbols e a fonte Roboto empacotados no app.
+Os dois apps seguem o **Material 3 Expressive**: formas orgânicas ("cookie", flor e blob), títulos grandes na fonte Bricolage Grotesque, botões em pílula e animações. O feed foi pensado para ter sempre conteúdo novo: stories, um post em destaque, blocos misturados entre os posts ("perto de você", "parque do dia", pedidos de encontro, anúncio), curtida animada, coração gigante no toque duplo, rolagem infinita e aviso de fotos novas. O Descobrir termina com uma comemoração de match com confete.
+
+**Cores que o cachorro enxerga.** Cães são dicromatas: só têm cones para azul-violeta e amarelo, e vermelho e verde viram um marrom acinzentado para eles. Por isso a paleta inteira usa só azul, amarelo, violeta e neutros. Até o "erro" é amarelo e o "sucesso" é azul. O azul fraquinho que o cliente pediu continua presente como cor de fundo dos cartões. A paleta tem tema claro e escuro e fica em `mobile/lib/main.dart` e em `desktop/src/app.css`.
 
 ## Do pedido do cliente para o app
 
@@ -33,7 +35,7 @@ Os dois apps seguem o **Material 3**. As cores são geradas a partir do azul fra
 | Histórico do cão e de quais cães o dono já teve                      | Histórico no perfil do cão (cadastro, vacinas, encontros, incidentes) e perfil do dono com cães atuais e antigos |
 | Grátis com anúncios de pet shops / premium sem anúncios              | Banner de patrocinador. O interruptor "Premium" no Perfil tira os anúncios (pagamento ainda não definido pelo cliente) |
 | Mobile e tablet                                                      | Flutter com layout de tablet (menu lateral)                                                  |
-| Cores azul fraquinho e branco                                        | Material 3 com a cor semente `#7EB6E6` (cães enxergam bem o azul 😉)                        |
+| Cores azul fraquinho e branco                                        | Paleta azul e amarela, as cores que o cachorro enxerga, mantendo o azul claro do cliente     |
 | LGPD                                                                 | Aceite dos termos no cadastro, exclusão de conta, CPF e telefone visíveis só para a moderação, localização exata nunca mostrada (só a distância) |
 
 ## Como rodar
@@ -152,3 +154,5 @@ As fotos dos dados de exemplo são do [Unsplash](https://unsplash.com) e são ca
 | Rex | [Random Thinking](https://unsplash.com/@randomthinking) |
 | Nina | [Meagan Barr](https://unsplash.com/@megz_barr) |
 | Fotos do feed | [keila Paludo](https://unsplash.com/@keilapaludo), [Jackie Best](https://unsplash.com/@bugsandslugs), [Denis Bayer](https://unsplash.com/@denisbayer), [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev), [David Valentine](https://unsplash.com/@thephotochad), [Gosia Jamrozik](https://unsplash.com/@gosiaj), [yu wang](https://unsplash.com/@boboguai2) |
+
+A fonte [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) usa a licença SIL Open Font License (`mobile/assets/fonts/BricolageGrotesque-OFL.txt`).
