@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { api, formatDate, reportReasons } from '../lib/api.js';
   import { go, showError, toast } from '../lib/state.svelte.js';
+  import Icon from '../lib/Icon.svelte';
 
   let tab = $state('reports');
   let status = $state('aberta');
@@ -35,73 +36,113 @@
   }
 </script>
 
-<h1>🛡️ Moderação</h1>
-<div class="row">
-  <button class:primary={tab === 'reports'} onclick={() => (tab = 'reports')}>Denúncias</button>
-  <button class:primary={tab === 'users'} onclick={() => (tab = 'users')}>Donos</button>
+<div class="page-header"><h1>Moderação</h1></div>
+
+<!-- Abas primárias do M3 -->
+<div class="tabs" role="tablist">
+  <button role="tab" class:active={tab === 'reports'} onclick={() => (tab = 'reports')}><Icon name="flag" /> Denúncias</button>
+  <button role="tab" class:active={tab === 'users'} onclick={() => (tab = 'users')}><Icon name="group" /> Donos</button>
 </div>
-<br />
 
 {#if tab === 'reports'}
-  <label style="max-width:240px">Situação
-    <select bind:value={status} onchange={loadReports}>
-      <option value="aberta">Em aberto</option>
-      <option value="procedente">Procedentes</option>
-      <option value="improcedente">Improcedentes</option>
-    </select>
-  </label>
-  {#if reports.length === 0}<p class="empty">Nenhuma denúncia aqui.</p>{/if}
+  <div class="segmented" role="group" aria-label="Situação">
+    {#each [['aberta', 'Em aberto'], ['procedente', 'Procedentes'], ['improcedente', 'Improcedentes']] as [k, v]}
+      <button class:selected={status === k} onclick={() => { status = k; loadReports(); }}>
+        {#if status === k}<Icon name="check" />{/if} {v}
+      </button>
+    {/each}
+  </div>
+  {#if reports.length === 0}<div class="empty"><Icon name="task_alt" />Nenhuma denúncia aqui.</div>{/if}
   {#each reports as r (r.id)}
-    <div class="card">
+    <div class="card outlined">
       <div class="row">
-        <strong class="grow">#{r.id} — {reportReasons[r.reason] ?? r.reason}</strong>
-        <small class="muted">{formatDate(r.created_at)}</small>
+        <span class="chip error"><Icon name="flag" /> {reportReasons[r.reason] ?? r.reason}</span>
+        <span class="grow"></span>
+        <small class="muted">#{r.id} · {formatDate(r.created_at)}</small>
       </div>
       <p>{r.details || 'Sem detalhes.'}</p>
-      <p class="muted">Denunciado por {r.reporter_name}</p>
-      <div class="grid2">
-        <div>
-          <strong>Dono denunciado</strong> {#if r.target_banned}<span class="chip bad">bloqueado</span>{/if}<br />
-          {r.target_name}<br />CPF: {r.target_cpf ?? '—'}<br />Tel.: {r.target_phone}<br />{r.target_email}<br />{r.target_address}<br />
-          <small>Total de denúncias contra este dono: {r.target_total_reports}</small>
+      <p class="muted small">Denunciado por {r.reporter_name}</p>
+      <div class="grid2 people">
+        <div class="card filled">
+          <h3>Dono denunciado {#if r.target_banned}<span class="chip error">bloqueado</span>{/if}</h3>
+          <div>{r.target_name}</div>
+          <div class="muted small">
+            CPF {r.target_cpf ?? '—'} · Tel. {r.target_phone}<br />{r.target_email}<br />{r.target_address}<br />
+            Total de denúncias contra este dono: {r.target_total_reports}
+          </div>
         </div>
-        <div>
-          {#if r.target_dog_id}
-            <strong>Cão</strong><br /><button class="link" onclick={() => go('dog', r.target_dog_id)}>{r.target_dog_name}</button>
-          {/if}
-        </div>
+        {#if r.target_dog_id}
+          <div class="card filled">
+            <h3>Cão</h3>
+            <button class="link" onclick={() => go('dog', r.target_dog_id)}>{r.target_dog_name}</button>
+          </div>
+        {/if}
       </div>
       {#if r.status === 'aberta'}
-        <div class="row wrap" style="margin-top:12px">
-          <button onclick={() => resolve(r, false, false)}>Improcedente</button>
+        <div class="row wrap end">
+          <button class="text" onclick={() => resolve(r, false, false)}>Improcedente</button>
           <button onclick={() => resolve(r, true, false)}>Procedente (registrar incidente)</button>
-          <button class="danger" onclick={() => resolve(r, true, true)}>Procedente + bloquear conta</button>
+          <button class="danger primary" onclick={() => resolve(r, true, true)}><Icon name="block" /> Procedente + bloquear conta</button>
         </div>
       {/if}
     </div>
   {/each}
 {:else}
-  <form class="row" onsubmit={(e) => { e.preventDefault(); searchUsers(); }}>
+  <form class="search" onsubmit={(e) => { e.preventDefault(); searchUsers(); }}>
+    <Icon name="search" />
     <input placeholder="Buscar por nome, e-mail ou CPF" bind:value={q} />
-    <button class="primary">Buscar</button>
   </form>
-  <table>
-    <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Endereço</th><th>Cães</th><th>Denúncias</th><th></th></tr></thead>
-    <tbody>
-      {#each users as u (u.id)}
-        <tr>
-          <td><button class="link" onclick={() => go('owner', u.id)}>{u.name}</button><br /><small class="muted">{u.email}</small></td>
-          <td>{u.cpf ?? '—'}</td>
-          <td>{u.phone}</td>
-          <td>{u.address}, {u.city} - {u.cep}</td>
-          <td>{u.dogs}</td>
-          <td>{u.reports}</td>
-          <td>
-            {#if u.banned_at}<span class="bad" title={u.ban_reason}>Bloqueado</span>
-            {:else if !u.is_admin}<button class="danger" onclick={() => ban(u)}>Bloquear</button>{/if}
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <div class="card outlined table">
+    <table>
+      <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Endereço</th><th>Cães</th><th>Denúncias</th><th></th></tr></thead>
+      <tbody>
+        {#each users as u (u.id)}
+          <tr>
+            <td><button class="link" onclick={() => go('owner', u.id)}>{u.name}</button><br /><small class="muted">{u.email}</small></td>
+            <td>{u.cpf ?? '—'}</td>
+            <td>{u.phone}</td>
+            <td>{u.address}, {u.city} - {u.cep}</td>
+            <td>{u.dogs}</td>
+            <td>{u.reports}</td>
+            <td>
+              {#if u.banned_at}<span class="chip error" title={u.ban_reason}>Bloqueado</span>
+              {:else if !u.is_admin}<button class="danger" onclick={() => ban(u)}>Bloquear</button>{/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
 {/if}
+
+<style>
+  .tabs { display: flex; border-bottom: 1px solid var(--md-outline-variant); margin-bottom: 16px; }
+  .tabs button {
+    height: 48px;
+    border: none;
+    border-radius: 0;
+    color: var(--md-on-surface-variant);
+    border-bottom: 3px solid transparent;
+    padding: 0 24px;
+  }
+  .tabs button.active { color: var(--md-primary); border-bottom-color: var(--md-primary); }
+  .small { font-size: 14px; line-height: 20px; }
+  .people { margin: 12px 0; gap: 12px; }
+  .people .card { margin: 0; }
+  .end { justify-content: flex-end; }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--md-surface-container-high);
+    padding: 0 16px;
+    margin-bottom: 16px;
+    color: var(--md-on-surface-variant);
+  }
+  .search input { border: none; min-height: 0; padding: 0; height: 100%; }
+  .search input:focus { border: none; padding: 0; }
+  .table { padding: 0; overflow-x: auto; }
+  td .chip { margin: 0; }
+</style>

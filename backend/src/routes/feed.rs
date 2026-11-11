@@ -75,7 +75,7 @@ pub async fn feed(State(state): State<AppState>, user: AuthUser, Query(q): Query
          JOIN dogs d ON d.id = p.dog_id
          JOIN users u ON u.id = d.owner_id
          WHERE u.banned_at IS NULL AND u.deleted_at IS NULL AND d.removed_at IS NULL
-         ORDER BY p.id DESC LIMIT 20 OFFSET ?",
+         ORDER BY p.created_at DESC, p.id DESC LIMIT 20 OFFSET ?",
     )
     .bind(user.id)
     .bind(page * 20)

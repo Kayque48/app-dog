@@ -38,13 +38,16 @@ class Api {
     }
   }
 
-  /// Converte "/uploads/x.jpg" em URL completa.
-  static String? imageUrl(String? path) => path == null ? null : '$apiUrl$path';
+  /// Converte "/uploads/x.jpg" em URL completa. As fotos de exemplo (Unsplash) já vêm completas.
+  static String? imageUrl(String? path) {
+    if (path == null) return null;
+    return path.startsWith('http') ? path : '$apiUrl$path';
+  }
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (_token != null) 'Authorization': 'Bearer $_token',
-      };
+    'Content-Type': 'application/json',
+    if (_token != null) 'Authorization': 'Bearer $_token',
+  };
 
   Future<dynamic> _send(String method, String path, [Object? body]) async {
     final uri = Uri.parse('$apiUrl/api$path');
@@ -64,7 +67,10 @@ class Api {
     if (res.statusCode >= 400) {
       // Sessão expirada ou conta bloqueada: apaga o token.
       if (res.statusCode == 401) _saveToken(null);
-      throw ApiException(data is Map && data['error'] != null ? data['error'] : 'Erro ${res.statusCode}', res.statusCode);
+      throw ApiException(
+        data is Map && data['error'] != null ? data['error'] : 'Erro ${res.statusCode}',
+        res.statusCode,
+      );
     }
     return data;
   }

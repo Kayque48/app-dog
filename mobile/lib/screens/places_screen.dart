@@ -53,17 +53,23 @@ class _PlacesScreenState extends State<PlacesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
           title: const Text('Sugerir ponto de encontro'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('O ponto será marcado no local onde você está agora.'),
-            const SizedBox(height: 12),
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Nome do local')),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: kind,
-              items: [for (final e in placeKinds.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
-              onChanged: (v) => setLocal(() => kind = v!),
-            ),
-          ]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('O ponto será marcado no local onde você está agora.'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Nome do local'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: kind,
+                items: [for (final e in placeKinds.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+                onChanged: (v) => setLocal(() => kind = v!),
+              ),
+            ],
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
             FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salvar')),
@@ -81,9 +87,9 @@ class _PlacesScreenState extends State<PlacesScreen> {
   }
 
   void _openMap(Map<String, dynamic> p) => launchUrl(
-        Uri.parse('https://www.google.com/maps/search/?api=1&query=${p['lat']},${p['lng']}'),
-        mode: LaunchMode.externalApplication,
-      );
+    Uri.parse('https://www.google.com/maps/search/?api=1&query=${p['lat']},${p['lng']}'),
+    mode: LaunchMode.externalApplication,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -92,29 +98,37 @@ class _PlacesScreenState extends State<PlacesScreen> {
       appBar: AppBar(title: const Text('Parques e pontos de encontro')),
       floatingActionButton: FloatingActionButton(onPressed: _addPlace, child: const Icon(Icons.add_location_alt)),
       body: _error != null
-          ? EmptyState(icon: Icons.location_off, text: _error!, action: OutlinedButton(onPressed: _load, child: const Text('Tentar de novo')))
+          ? EmptyState(
+              icon: Icons.location_off,
+              text: _error!,
+              action: OutlinedButton(onPressed: _load, child: const Text('Tentar de novo')),
+            )
           : places == null
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: Constrained(
-                    child: ListView(children: [
-                      for (final p in places)
-                        Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          child: ListTile(
-                            leading: Icon(p['kind'] == 'parque' ? Icons.park : Icons.place, size: 36),
-                            title: Text(p['name']),
-                            subtitle: Text('${placeKinds[p['kind']]} • ${formatDistance(p['distance_m'])}\n${p['address']}'),
-                            isThreeLine: true,
-                            trailing: const Icon(Icons.map),
-                            onTap: () => _openMap(p),
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: Constrained(
+                child: ListView(
+                  children: [
+                    for (final p in places)
+                      Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: ListTile(
+                          leading: Icon(p['kind'] == 'parque' ? Icons.park : Icons.place, size: 36),
+                          title: Text(p['name']),
+                          subtitle: Text(
+                            '${placeKinds[p['kind']]} • ${formatDistance(p['distance_m'])}\n${p['address']}',
                           ),
+                          isThreeLine: true,
+                          trailing: const Icon(Icons.map),
+                          onTap: () => _openMap(p),
                         ),
-                      const AdBanner(),
-                    ]),
-                  ),
+                      ),
+                    const AdBanner(),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 }

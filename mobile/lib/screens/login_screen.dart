@@ -50,9 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 32),
               Icon(Icons.pets, size: 88, color: primary),
-              Text('All Love',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: primary, fontWeight: FontWeight.bold)),
+              Text(
+                'All Love',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: primary, fontWeight: FontWeight.bold),
+              ),
               const Text('A rede social dos cachorros', textAlign: TextAlign.center),
               const SizedBox(height: 32),
               TextField(

@@ -16,6 +16,8 @@ Os dois apps falam com a mesma API, então quem usa o celular encontra quem usa 
 
 O desktop também tem o painel de **Moderação**, que aparece só para administradores.
 
+Os dois apps seguem o **Material 3**. As cores são geradas a partir do azul fraquinho pedido pelo cliente (`#7EB6E6`), com tema claro e escuro. No Flutter isso vem do `ColorScheme.fromSeed`; no desktop, de tokens CSS gerados com o `@material/material-color-utilities`, com ícones Material Symbols e a fonte Roboto empacotados no app.
+
 ## Do pedido do cliente para o app
 
 | O cliente pediu                                                      | Onde está                                                                                    |
@@ -31,7 +33,7 @@ O desktop também tem o painel de **Moderação**, que aparece só para administ
 | Histórico do cão e de quais cães o dono já teve                      | Histórico no perfil do cão (cadastro, vacinas, encontros, incidentes) e perfil do dono com cães atuais e antigos |
 | Grátis com anúncios de pet shops / premium sem anúncios              | Banner de patrocinador. O interruptor "Premium" no Perfil tira os anúncios (pagamento ainda não definido pelo cliente) |
 | Mobile e tablet                                                      | Flutter com layout de tablet (menu lateral)                                                  |
-| Cores azul fraquinho e branco                                        | Tema `#7EB6E6` / branco (cães enxergam bem o azul 😉)                                       |
+| Cores azul fraquinho e branco                                        | Material 3 com a cor semente `#7EB6E6` (cães enxergam bem o azul 😉)                        |
 | LGPD                                                                 | Aceite dos termos no cadastro, exclusão de conta, CPF e telefone visíveis só para a moderação, localização exata nunca mostrada (só a distância) |
 
 ## Como rodar
@@ -47,10 +49,24 @@ cargo run
 
 A API sobe em `http://localhost:3000` e cria o banco `alllove.db` com dados de exemplo.
 
-| Conta                 | E-mail                | Senha      |
-|-----------------------|-----------------------|------------|
-| Administrador         | `admin@alllove.local` | `admin123` |
-| Donos de exemplo (Mel, Thor e Luna, perto do Ibirapuera) | `maria@demo.local`, `joao@demo.local`, `ana@demo.local` | `demo1234` |
+O administrador é `admin@alllove.local`, senha `admin123`.
+
+### Dados de exemplo
+
+Para dar uma noção do app funcionando, a API cria 8 donos com cães perto do Parque Ibirapuera, todos a menos de 500 m uns dos outros. A senha de todos é `demo1234`.
+
+| E-mail               | Cão                          | O que dá para ver com essa conta                                                     |
+|----------------------|------------------------------|--------------------------------------------------------------------------------------|
+| `joao@demo.local`    | Thor (Golden Retriever)      | Encontro já combinado com a Mel, pedido do Bento esperando resposta e 2 fotos no feed |
+| `maria@demo.local`   | Mel (Shih Tzu)               | Pedido da Pipoca para responder e a Nina em "cães que já tive"                       |
+| `ana@demo.local`     | Luna (vira-lata, no cio)     | Pedido enviado para o Bento                                                          |
+| `pedro@demo.local`   | Bento (Border Collie)        | Pedido enviado para o Thor e o da Luna para responder                                |
+| `beatriz@demo.local` | Pipoca (Pug)                 | Pedido enviado para a Mel                                                            |
+| `lucas@demo.local`   | Salsicha (Dachshund)         | Foto no feed                                                                         |
+| `rafaela@demo.local` | Bidu (Buldogue Francês)      | **Vacinas atrasadas**: o Bidu fica bloqueado no Descobrir                            |
+| `carlos@demo.local`  | Rex (vira-lata, agressivo)   | Incidente confirmado no histórico e uma denúncia aberta na moderação                 |
+
+O feed vem com 7 fotos e curtidas. Os parques de exemplo ficam em São Paulo e os anúncios são de pet shops fictícios.
 
 Variáveis opcionais:
 
@@ -119,3 +135,20 @@ Estes pontos foram citados na entrevista, mas ainda estão em aberto com o clien
 - **Pagamento do premium.** Por enquanto é só um interruptor.
 - **Integração com uma carteira de vacinação oficial.** Hoje o dono registra as vacinas à mão.
 - **Capacidade de 20 a 50 mil acessos.** O SQLite atende bem uma turma. Para produção, a troca natural é PostgreSQL (o sqlx também suporta) e um servidor com vários núcleos.
+
+## Créditos das fotos
+
+As fotos dos dados de exemplo são do [Unsplash](https://unsplash.com) e são carregadas direto de lá, como pedem as [regras de uso do Unsplash](https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines).
+
+| Foto | Autor |
+|---|---|
+| Mel | [Adam Grabek](https://unsplash.com/@agmakonts) |
+| Thor | [Nick van der Vegt](https://unsplash.com/@nick_vandervegt) |
+| Luna | [Rafael Forseck](https://unsplash.com/@jpeg_therapy) |
+| Bento | [Anna Stampfli](https://unsplash.com/@annastampfli) |
+| Pipoca | [James Tiono](https://unsplash.com/@jamestiono) |
+| Salsicha | [Valdrin Maksutaj](https://unsplash.com/@volliem) |
+| Bidu | [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev) |
+| Rex | [Random Thinking](https://unsplash.com/@randomthinking) |
+| Nina | [Meagan Barr](https://unsplash.com/@megz_barr) |
+| Fotos do feed | [keila Paludo](https://unsplash.com/@keilapaludo), [Jackie Best](https://unsplash.com/@bugsandslugs), [Denis Bayer](https://unsplash.com/@denisbayer), [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev), [David Valentine](https://unsplash.com/@thephotochad), [Gosia Jamrozik](https://unsplash.com/@gosiaj), [yu wang](https://unsplash.com/@boboguai2) |

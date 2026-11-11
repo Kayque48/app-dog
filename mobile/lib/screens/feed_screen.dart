@@ -84,10 +84,12 @@ class _FeedScreenState extends State<FeedScreen> {
       body: RefreshIndicator(
         onRefresh: () => _load(reset: true),
         child: _posts.isEmpty && _end
-            ? ListView(children: const [
-                SizedBox(height: 120),
-                EmptyState(icon: Icons.photo_camera, text: 'Ainda não há fotos. Seja o primeiro a publicar!'),
-              ])
+            ? ListView(
+                children: const [
+                  SizedBox(height: 120),
+                  EmptyState(icon: Icons.photo_camera, text: 'Ainda não há fotos. Seja o primeiro a publicar!'),
+                ],
+              )
             : Constrained(
                 child: ListView.builder(
                   controller: _scroll,
@@ -114,26 +116,37 @@ class _PostCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       clipBehavior: Clip.antiAlias,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        ListTile(
-          leading: DogAvatar(photoUrl: post['dog_photo_url']),
-          title: Text(post['dog_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(post['dog_breed']),
-          onTap: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: post['dog_id']))),
-        ),
-        GestureDetector(onDoubleTap: liked ? null : onLike, child: DogPhoto(photoUrl: post['image_url'], height: 320)),
-        Row(children: [
-          IconButton(
-            iconSize: 30,
-            icon: Icon(liked ? Icons.favorite : Icons.favorite_border, color: liked ? Colors.red : null),
-            onPressed: onLike,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: DogAvatar(photoUrl: post['dog_photo_url']),
+            title: Text(post['dog_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(post['dog_breed']),
+            onTap: () =>
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: post['dog_id']))),
           ),
-          Text('${post['likes']} curtida(s)'),
-        ]),
-        if ((post['caption'] as String).isNotEmpty)
-          Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text(post['caption'])),
-      ]),
+          GestureDetector(
+            onDoubleTap: liked ? null : onLike,
+            child: DogPhoto(photoUrl: post['image_url'], height: 320),
+          ),
+          Row(
+            children: [
+              IconButton(
+                iconSize: 30,
+                icon: Icon(
+                  liked ? Icons.favorite : Icons.favorite_border,
+                  color: liked ? Theme.of(context).colorScheme.error : null,
+                ),
+                onPressed: onLike,
+              ),
+              Text('${post['likes']} curtida(s)'),
+            ],
+          ),
+          if ((post['caption'] as String).isNotEmpty)
+            Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text(post['caption'])),
+        ],
+      ),
     );
   }
 }
@@ -156,16 +169,19 @@ class _NewPostScreenState extends State<NewPostScreen> {
   @override
   void initState() {
     super.initState();
-    Api.instance.get('/dogs/mine').then((data) {
-      final dogs = (data as List).map((j) => Dog.fromJson(j)).where((d) => !d.removed).toList();
-      if (!mounted) return;
-      setState(() {
-        _dogs = dogs;
-        _dogId = dogs.isEmpty ? null : dogs.first.id;
-      });
-    }).catchError((e) {
-      if (mounted) showError(context, e);
-    });
+    Api.instance
+        .get('/dogs/mine')
+        .then((data) {
+          final dogs = (data as List).map((j) => Dog.fromJson(j)).where((d) => !d.removed).toList();
+          if (!mounted) return;
+          setState(() {
+            _dogs = dogs;
+            _dogId = dogs.isEmpty ? null : dogs.first.id;
+          });
+        })
+        .catchError((e) {
+          if (mounted) showError(context, e);
+        });
   }
 
   Future<void> _pick(ImageSource source) async {
@@ -194,38 +210,49 @@ class _NewPostScreenState extends State<NewPostScreen> {
       body: Constrained(
         child: _dogs.isEmpty
             ? const EmptyState(icon: Icons.pets, text: 'Cadastre um cão na aba Perfil antes de publicar.')
-            : ListView(padding: const EdgeInsets.all(16), children: [
-                DropdownButtonFormField<int>(
-                  initialValue: _dogId,
-                  decoration: const InputDecoration(labelText: 'Cão'),
-                  items: [for (final d in _dogs) DropdownMenuItem(value: d.id, child: Text(d.name))],
-                  onChanged: (v) => setState(() => _dogId = v),
-                ),
-                const SizedBox(height: 12),
-                if (_image != null) Image.file(File(_image!.path), height: 240, fit: BoxFit.cover),
-                Row(children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                        onPressed: () => _pick(ImageSource.camera),
-                        icon: const Icon(Icons.photo_camera),
-                        label: const Text('Câmera')),
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  DropdownButtonFormField<int>(
+                    initialValue: _dogId,
+                    decoration: const InputDecoration(labelText: 'Cão'),
+                    items: [for (final d in _dogs) DropdownMenuItem(value: d.id, child: Text(d.name))],
+                    onChanged: (v) => setState(() => _dogId = v),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                        onPressed: () => _pick(ImageSource.gallery),
-                        icon: const Icon(Icons.photo),
-                        label: const Text('Galeria')),
+                  const SizedBox(height: 12),
+                  if (_image != null) Image.file(File(_image!.path), height: 240, fit: BoxFit.cover),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _pick(ImageSource.camera),
+                          icon: const Icon(Icons.photo_camera),
+                          label: const Text('Câmera'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _pick(ImageSource.gallery),
+                          icon: const Icon(Icons.photo),
+                          label: const Text('Galeria'),
+                        ),
+                      ),
+                    ],
                   ),
-                ]),
-                const SizedBox(height: 12),
-                TextField(controller: _caption, maxLines: 3, decoration: const InputDecoration(labelText: 'Legenda')),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _sending || _image == null ? null : _send,
-                  child: Text(_sending ? 'Publicando...' : 'Publicar'),
-                ),
-              ]),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _caption,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'Legenda'),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _sending || _image == null ? null : _send,
+                    child: Text(_sending ? 'Publicando...' : 'Publicar'),
+                  ),
+                ],
+              ),
       ),
     );
   }

@@ -2,6 +2,7 @@
 
 mod auth;
 mod db;
+mod demo;
 mod error;
 mod routes;
 mod rules;

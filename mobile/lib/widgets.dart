@@ -11,10 +11,8 @@ void showError(BuildContext context, Object error) {
   final message = error.toString();
   if (error is ApiException && (error.status == 401 || message.startsWith('Conta bloqueada'))) {
     Api.instance.forgetToken();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LoginScreen(initialMessage: message)),
-      (_) => false,
-    );
+    Navigator.of(context)
+        .pushAndRemoveUntil(MaterialPageRoute(builder: (_) => LoginScreen(initialMessage: message)), (_) => false);
     return;
   }
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -47,6 +45,12 @@ Future<Position?> updateMyLocation(BuildContext context) async {
   }
 }
 
+/// Cor de "deu certo" (o Material 3 não tem uma cor de sucesso no esquema padrão).
+Color successColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? const Color(0xFFA3D69F) : const Color(0xFF2E6B30);
+Color successContainer(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1D5220) : const Color(0xFFC8F0C4);
+
 class DogAvatar extends StatelessWidget {
   const DogAvatar({super.key, required this.photoUrl, this.radius = 24});
   final String? photoUrl;
@@ -78,7 +82,7 @@ class DogPhoto extends StatelessWidget {
       width: double.infinity,
       color: Theme.of(context).colorScheme.primaryContainer,
       child: url == null
-          ? Icon(Icons.pets, size: height / 3, color: Colors.white)
+          ? Icon(Icons.pets, size: height / 3, color: Theme.of(context).colorScheme.onPrimaryContainer)
           : Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.broken_image)),
     );
   }
@@ -98,23 +102,29 @@ class _AdBannerState extends State<AdBanner> {
   @override
   void initState() {
     super.initState();
-    Api.instance.get('/ads/random').then((data) {
-      if (mounted) setState(() => _ad = data['ad']);
-    }).catchError((_) {});
+    Api.instance
+        .get('/ads/random')
+        .then((data) {
+          if (mounted) setState(() => _ad = data['ad']);
+        })
+        .catchError((_) {});
   }
 
   @override
   Widget build(BuildContext context) {
     final ad = _ad;
     if (ad == null) return const SizedBox.shrink();
-    return Card(
-      color: const Color(0xFFFFF8E1),
+    final scheme = Theme.of(context).colorScheme;
+    return Card.filled(
+      color: scheme.tertiaryContainer,
       margin: const EdgeInsets.all(8),
       child: ListTile(
+        iconColor: scheme.onTertiaryContainer,
+        textColor: scheme.onTertiaryContainer,
         leading: const Icon(Icons.storefront),
         title: Text(ad['sponsor']),
         subtitle: Text(ad['message']),
-        trailing: const Text('Anúncio', style: TextStyle(fontSize: 11, color: Colors.black54)),
+        trailing: Text('Anúncio', style: Theme.of(context).textTheme.labelSmall),
       ),
     );
   }
@@ -127,8 +137,12 @@ class Constrained extends StatelessWidget {
   final double maxWidth;
 
   @override
-  Widget build(BuildContext context) =>
-      Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child));
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    ),
+  );
 }
 
 class EmptyState extends StatelessWidget {
@@ -139,14 +153,17 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
-            if (action != null) ...[const SizedBox(height: 16), action!],
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 16),
+          Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+          if (action != null) ...[const SizedBox(height: 16), action!],
+        ],
+      ),
+    ),
+  );
 }

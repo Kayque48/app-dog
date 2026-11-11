@@ -34,32 +34,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _page() => switch (_tab) {
-        0 => const FeedScreen(),
-        1 => const DiscoverScreen(),
-        2 => const MatchesScreen(),
-        3 => const PlacesScreen(),
-        _ => const ProfileScreen(),
-      };
+    0 => const FeedScreen(),
+    1 => const DiscoverScreen(),
+    2 => const MatchesScreen(),
+    3 => const PlacesScreen(),
+    _ => const ProfileScreen(),
+  };
 
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.sizeOf(context).width >= 700;
     if (isTablet) {
       return Scaffold(
-        body: Row(children: [
-          NavigationRail(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
-            labelType: NavigationRailLabelType.all,
-            leading: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.pets, size: 36)),
-            destinations: [
-              for (final d in _destinations)
-                NavigationRailDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: Text(d.$3)),
-            ],
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(child: _page()),
-        ]),
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              labelType: NavigationRailLabelType.all,
+              leading: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.pets, size: 36)),
+              destinations: [
+                for (final d in _destinations)
+                  NavigationRailDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: Text(d.$3)),
+              ],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: _page()),
+          ],
+        ),
       );
     }
     return Scaffold(

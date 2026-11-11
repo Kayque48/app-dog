@@ -1,10 +1,12 @@
 <script>
   import { api, setToken } from '../lib/api.js';
   import { app, showError, toast, updateLocation } from '../lib/state.svelte.js';
+  import Icon from '../lib/Icon.svelte';
 
   let form = $state({ ...app.me });
-  let lat = $state(app.me.lat ?? '');
-  let lng = $state(app.me.lng ?? '');
+  const coord = (v) => (v == null ? '' : Number(v.toFixed(5)));
+  let lat = $state(coord(app.me.lat));
+  let lng = $state(coord(app.me.lng));
 
   async function save(e) {
     e.preventDefault();
@@ -21,8 +23,8 @@
   async function useGps() {
     if (await updateLocation()) {
       app.me = await api('GET', '/me');
-      lat = app.me.lat;
-      lng = app.me.lng;
+      lat = coord(app.me.lat);
+      lng = coord(app.me.lng);
       toast('Localização atualizada');
     } else toast('Não foi possível ler a localização deste computador. Informe manualmente.');
   }
@@ -46,11 +48,25 @@
   }
 </script>
 
-<h1>Perfil</h1>
+<div class="page-header">
+  <div class="avatar"><Icon name="person" filled /></div>
+  <div class="grow">
+    <h1>{app.me.name}</h1>
+    <small class="muted">{app.me.email} · CPF {app.me.cpf ?? '—'}</small>
+  </div>
+</div>
 
-<form class="card" onsubmit={save}>
+<div class="card outlined row premium">
+  <Icon name="workspace_premium" />
+  <div class="grow">
+    <div>All Love Premium</div>
+    <small class="muted">Use o app sem anúncios</small>
+  </div>
+  <input type="checkbox" class="switch" checked={app.me.is_premium} onchange={setPremium} aria-label="Premium" />
+</div>
+
+<form class="card outlined" onsubmit={save}>
   <h3>Meus dados</h3>
-  <p class="muted">E-mail: {app.me.email} • CPF: {app.me.cpf ?? '—'}</p>
   <div class="grid2">
     <label>Nome <input bind:value={form.name} required /></label>
     <label>Telefone <input bind:value={form.phone} required /></label>
@@ -58,31 +74,46 @@
     <label>Cidade <input bind:value={form.city} required /></label>
   </div>
   <label>Endereço <input bind:value={form.address} required /></label>
-  <button class="primary">Salvar</button>
+  <div class="row end"><button class="primary">Salvar</button></div>
 </form>
 
-<form class="card" onsubmit={saveLocation}>
+<form class="card outlined" onsubmit={saveLocation}>
   <h3>Minha localização</h3>
-  <p class="muted">
+  <p class="muted small">
     Usada para achar cães e parques perto de você. Ninguém vê sua posição exata, só a distância aproximada.
     Se o computador não tiver GPS, copie as coordenadas do Google Maps (clique com o botão direito no mapa).
   </p>
-  <div class="row wrap">
+  <div class="grid2">
     <label>Latitude <input bind:value={lat} placeholder="-23.5874" required /></label>
     <label>Longitude <input bind:value={lng} placeholder="-46.6576" required /></label>
   </div>
-  <div class="row">
-    <button type="button" onclick={useGps}>📍 Usar localização do computador</button>
+  <div class="row end">
+    <button type="button" onclick={useGps}><Icon name="my_location" /> Usar localização do computador</button>
     <button class="primary">Salvar coordenadas</button>
   </div>
 </form>
 
-<div class="card">
-  <h3>All Love Premium</h3>
-  <label class="check"><input type="checkbox" checked={app.me.is_premium} onchange={setPremium} /> Premium (sem anúncios)</label>
-</div>
-
-<div class="card">
-  <h3>Privacidade</h3>
+<div class="card outlined row">
+  <Icon name="privacy_tip" />
+  <div class="grow">
+    <div>Privacidade</div>
+    <small class="muted">Apaga seus dados pessoais (LGPD)</small>
+  </div>
   <button class="danger" onclick={deleteAccount}>Excluir minha conta</button>
 </div>
+
+<style>
+  .page-header h1 { flex: none; }
+  .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    display: grid;
+    place-items: center;
+  }
+  .row > :global(.icon) { color: var(--md-on-surface-variant); }
+  .small { font-size: 14px; line-height: 20px; }
+  .end { justify-content: flex-end; }
+</style>

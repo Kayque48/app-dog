@@ -22,30 +22,42 @@ class OwnerScreen extends StatelessWidget {
           final u = snap.data as Map<String, dynamic>;
           final incidents = u['confirmed_incidents'] as int;
           return Constrained(
-            child: ListView(padding: const EdgeInsets.all(16), children: [
-              ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(u['first_name'], style: Theme.of(context).textTheme.titleLarge),
-                subtitle: Text('${u['city']} • no All Love desde ${formatDate(u['member_since'])}'),
-              ),
-              if (u['banned'] == true)
-                const Card(color: Color(0xFFFFEBEE), child: ListTile(leading: Icon(Icons.block), title: Text('Conta bloqueada'))),
-              ListTile(
-                leading: Icon(incidents == 0 ? Icons.verified_user : Icons.warning, color: incidents == 0 ? Colors.green : Colors.red),
-                title: Text(incidents == 0 ? 'Nenhum incidente confirmado' : '$incidents incidente(s) confirmado(s)'),
-              ),
-              const Divider(),
-              const Text('Cães deste dono', style: TextStyle(fontWeight: FontWeight.bold)),
-              for (final d in u['dogs'])
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
                 ListTile(
-                  leading: DogAvatar(photoUrl: d['photo_url']),
-                  title: Text('${d['name']} (${d['breed']})'),
-                  subtitle: Text(d['current']
-                      ? 'Desde ${formatDate(d['since'])}'
-                      : 'De ${formatDate(d['since'])} até ${formatDate(d['until'])}'),
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: d['id']))),
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  title: Text(u['first_name'], style: Theme.of(context).textTheme.titleLarge),
+                  subtitle: Text('${u['city']} • no All Love desde ${formatDate(u['member_since'])}'),
                 ),
-            ]),
+                if (u['banned'] == true)
+                  Card.filled(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    child: const ListTile(leading: Icon(Icons.block), title: Text('Conta bloqueada')),
+                  ),
+                ListTile(
+                  leading: Icon(
+                    incidents == 0 ? Icons.verified_user : Icons.warning,
+                    color: incidents == 0 ? successColor(context) : Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(incidents == 0 ? 'Nenhum incidente confirmado' : '$incidents incidente(s) confirmado(s)'),
+                ),
+                const Divider(),
+                const Text('Cães deste dono', style: TextStyle(fontWeight: FontWeight.bold)),
+                for (final d in u['dogs'])
+                  ListTile(
+                    leading: DogAvatar(photoUrl: d['photo_url']),
+                    title: Text('${d['name']} (${d['breed']})'),
+                    subtitle: Text(
+                      d['current']
+                          ? 'Desde ${formatDate(d['since'])}'
+                          : 'De ${formatDate(d['since'])} até ${formatDate(d['until'])}',
+                    ),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: d['id']))),
+                  ),
+              ],
+            ),
           );
         },
       ),

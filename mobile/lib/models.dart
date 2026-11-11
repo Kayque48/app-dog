@@ -24,9 +24,9 @@ const placeKinds = {'parque': 'Parque', 'praca': 'Praça', 'ponto_encontro': 'Po
 
 class VaccineStatus {
   VaccineStatus.fromJson(Map<String, dynamic> j)
-      : upToDate = j['up_to_date'],
-        missing = List<String>.from(j['missing']),
-        overdue = List<String>.from(j['overdue']);
+    : upToDate = j['up_to_date'],
+      missing = List<String>.from(j['missing']),
+      overdue = List<String>.from(j['overdue']);
 
   final bool upToDate;
   final List<String> missing;
@@ -43,24 +43,24 @@ class VaccineStatus {
 
 class Dog {
   Dog.fromJson(Map<String, dynamic> j)
-      : id = j['id'],
-        ownerId = j['owner_id'],
-        name = j['name'],
-        breed = j['breed'],
-        birthDate = j['birth_date'],
-        sex = j['sex'],
-        inHeat = j['in_heat'],
-        temperament = j['temperament'],
-        bites = j['bites'],
-        likes = j['likes'],
-        dislikes = j['dislikes'],
-        photoUrl = j['photo_url'],
-        removed = j['removed_at'] != null,
-        ageYears = j['age_years'],
-        vaccineStatus = VaccineStatus.fromJson(j['vaccine_status']),
-        distanceM = j['distance_m'],
-        ownerFirstName = j['owner_first_name'],
-        wantsToMeetYou = j['wants_to_meet_you'] ?? false;
+    : id = j['id'],
+      ownerId = j['owner_id'],
+      name = j['name'],
+      breed = j['breed'],
+      birthDate = j['birth_date'],
+      sex = j['sex'],
+      inHeat = j['in_heat'],
+      temperament = j['temperament'],
+      bites = j['bites'],
+      likes = j['likes'],
+      dislikes = j['dislikes'],
+      photoUrl = j['photo_url'],
+      removed = j['removed_at'] != null,
+      ageYears = j['age_years'],
+      vaccineStatus = VaccineStatus.fromJson(j['vaccine_status']),
+      distanceM = j['distance_m'],
+      ownerFirstName = j['owner_first_name'],
+      wantsToMeetYou = j['wants_to_meet_you'] ?? false;
 
   final int id;
   final int ownerId;
@@ -86,17 +86,17 @@ class Dog {
   String get ageText => ageYears == 1 ? '1 ano' : (ageYears == 0 ? 'Filhote' : '$ageYears anos');
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'breed': breed,
-        'birth_date': birthDate,
-        'sex': sex,
-        'in_heat': inHeat,
-        'temperament': temperament,
-        'bites': bites,
-        'likes': likes,
-        'dislikes': dislikes,
-        'photo_url': photoUrl,
-      };
+    'name': name,
+    'breed': breed,
+    'birth_date': birthDate,
+    'sex': sex,
+    'in_heat': inHeat,
+    'temperament': temperament,
+    'bites': bites,
+    'likes': likes,
+    'dislikes': dislikes,
+    'photo_url': photoUrl,
+  };
 }
 
 String formatDistance(int meters) {

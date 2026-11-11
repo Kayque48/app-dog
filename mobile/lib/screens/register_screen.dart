@@ -65,19 +65,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _required(String? v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null;
 
-  Widget _field(TextEditingController c, String label,
-          {TextInputType? type, bool obscure = false, String? hint, ValueChanged<String>? onChanged}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: TextFormField(
-          controller: c,
-          keyboardType: type,
-          obscureText: obscure,
-          validator: _required,
-          onChanged: onChanged,
-          decoration: InputDecoration(labelText: label, hintText: hint),
-        ),
-      );
+  Widget _field(
+    TextEditingController c,
+    String label, {
+    TextInputType? type,
+    bool obscure = false,
+    String? hint,
+    ValueChanged<String>? onChanged,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      controller: c,
+      keyboardType: type,
+      obscureText: obscure,
+      validator: _required,
+      onChanged: onChanged,
+      decoration: InputDecoration(labelText: label, hintText: hint),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -90,17 +95,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text('Seus dados ficam protegidos e só a moderação vê CPF, telefone e endereço. '
-                  'Eles servem para a segurança de todos os donos e cães.'),
+              const Text(
+                'Seus dados ficam protegidos e só a moderação vê CPF, telefone e endereço. '
+                'Eles servem para a segurança de todos os donos e cães.',
+              ),
               const SizedBox(height: 16),
               _field(_name, 'Nome completo'),
               _field(_email, 'E-mail', type: TextInputType.emailAddress),
               _field(_password, 'Senha (mínimo 6 caracteres)', obscure: true),
               _field(_phone, 'Telefone com DDD', type: TextInputType.phone, hint: '(11) 91234-5678'),
               _field(_cpf, 'CPF', type: TextInputType.number, hint: '000.000.000-00'),
-              _field(_cep, 'CEP', type: TextInputType.number, onChanged: (v) {
-                if (v.replaceAll(RegExp(r'\D'), '').length == 8) _fillFromCep();
-              }),
+              _field(
+                _cep,
+                'CEP',
+                type: TextInputType.number,
+                onChanged: (v) {
+                  if (v.replaceAll(RegExp(r'\D'), '').length == 8) _fillFromCep();
+                },
+              ),
               _field(_city, 'Cidade'),
               _field(_address, 'Endereço (rua, número, bairro)'),
               CheckboxListTile(

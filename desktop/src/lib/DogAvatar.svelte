@@ -1,16 +1,18 @@
 <script>
   import { imageUrl } from './api.js';
-  let { photo, size = 48 } = $props();
+  import Icon from './Icon.svelte';
+  let { photo, size = 40 } = $props();
 </script>
 
-<div class="avatar" style="width:{size}px;height:{size}px;font-size:{size / 2}px">
-  {#if photo}<img src={imageUrl(photo)} alt="" />{:else}🐶{/if}
+<div class="avatar" style="width:{size}px;height:{size}px">
+  {#if photo}<img src={imageUrl(photo)} alt="" />{:else}<Icon name="pets" filled size={size * 0.55} />{/if}
 </div>
 
 <style>
   .avatar {
     border-radius: 50%;
-    background: var(--blue-light);
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
     display: grid;
     place-items: center;
     overflow: hidden;

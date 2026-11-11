@@ -11,10 +11,25 @@ void main() {
 
   test('lê o cão vindo da API', () {
     final dog = Dog.fromJson({
-      'id': 1, 'owner_id': 2, 'name': 'Mel', 'breed': 'Shih Tzu', 'birth_date': '2021-03-15',
-      'sex': 'femea', 'in_heat': false, 'temperament': 'calmo', 'bites': false, 'likes': 'bolinha',
-      'dislikes': 'chinelo', 'photo_url': null, 'removed_at': null, 'age_years': 5,
-      'vaccine_status': {'up_to_date': false, 'missing': [], 'overdue': ['V8']},
+      'id': 1,
+      'owner_id': 2,
+      'name': 'Mel',
+      'breed': 'Shih Tzu',
+      'birth_date': '2021-03-15',
+      'sex': 'femea',
+      'in_heat': false,
+      'temperament': 'calmo',
+      'bites': false,
+      'likes': 'bolinha',
+      'dislikes': 'chinelo',
+      'photo_url': null,
+      'removed_at': null,
+      'age_years': 5,
+      'vaccine_status': {
+        'up_to_date': false,
+        'missing': [],
+        'overdue': ['V8'],
+      },
     });
     expect(dog.ageText, '5 anos');
     expect(dog.vaccineStatus.description, 'Atrasadas: V8');

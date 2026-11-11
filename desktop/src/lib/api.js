@@ -65,7 +65,8 @@ export async function openExternal(url) {
   window.open(url, '_blank', 'noreferrer');
 }
 
-export const imageUrl = (path) => (path ? `${API_URL}${path}` : null);
+/** Fotos enviadas ficam em "/uploads/..."; as de exemplo já vêm com a URL completa (Unsplash). */
+export const imageUrl = (path) => (!path ? null : path.startsWith('http') ? path : `${API_URL}${path}`);
 
 /** Endereço pelo CEP (ViaCEP). */
 export async function lookupCep(cep) {

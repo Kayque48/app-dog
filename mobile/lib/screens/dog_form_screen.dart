@@ -92,54 +92,84 @@ class _DogFormScreenState extends State<DogFormScreen> {
         maxWidth: 520,
         child: Form(
           key: _form,
-          child: ListView(padding: const EdgeInsets.all(16), children: [
-            Center(
-              child: GestureDetector(
-                onTap: _pickPhoto,
-                child: Stack(alignment: Alignment.bottomRight, children: [
-                  DogAvatar(photoUrl: _photoUrl, radius: 56),
-                  const CircleAvatar(radius: 16, child: Icon(Icons.camera_alt, size: 18)),
-                ]),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Center(
+                child: GestureDetector(
+                  onTap: _pickPhoto,
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      DogAvatar(photoUrl: _photoUrl, radius: 56),
+                      const CircleAvatar(radius: 16, child: Icon(Icons.camera_alt, size: 18)),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(controller: _name, validator: req, decoration: const InputDecoration(labelText: 'Nome')),
-            const SizedBox(height: 12),
-            TextFormField(controller: _breed, validator: req, decoration: const InputDecoration(labelText: 'Raça (ou vira-lata)')),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _pickBirth,
-              icon: const Icon(Icons.cake),
-              label: Text(_birth == null ? 'Data de nascimento' : 'Nascimento: ${formatDate(isoDate(_birth!))}'),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<String>(
-              segments: [for (final e in sexes.entries) ButtonSegment(value: e.key, label: Text(e.value))],
-              selected: {_sex},
-              onSelectionChanged: (s) => setState(() => _sex = s.first),
-            ),
-            if (_sex == 'femea')
-              SwitchListTile(title: const Text('Está no cio'), value: _inHeat, onChanged: (v) => setState(() => _inHeat = v)),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _temperament,
-              decoration: const InputDecoration(labelText: 'Temperamento'),
-              items: [for (final e in temperaments.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
-              onChanged: (v) => setState(() => _temperament = v!),
-            ),
-            SwitchListTile(title: const Text('Costuma morder'), value: _bites, onChanged: (v) => setState(() => _bites = v)),
-            TextFormField(controller: _likes, decoration: const InputDecoration(labelText: 'Do que gosta (ex.: morder bolinha)')),
-            const SizedBox(height: 12),
-            TextFormField(controller: _dislikes, decoration: const InputDecoration(labelText: 'Do que não gosta (ex.: chinelo)')),
-            const SizedBox(height: 20),
-            if (widget.dog == null)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text('Depois de salvar, registre as vacinas no perfil do cão. '
-                    'Sem V8/V10 e antirrábica em dia ele não aparece no Descobrir.'),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _name,
+                validator: req,
+                decoration: const InputDecoration(labelText: 'Nome'),
               ),
-            FilledButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Salvando...' : 'Salvar')),
-          ]),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _breed,
+                validator: req,
+                decoration: const InputDecoration(labelText: 'Raça (ou vira-lata)'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickBirth,
+                icon: const Icon(Icons.cake),
+                label: Text(_birth == null ? 'Data de nascimento' : 'Nascimento: ${formatDate(isoDate(_birth!))}'),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<String>(
+                segments: [for (final e in sexes.entries) ButtonSegment(value: e.key, label: Text(e.value))],
+                selected: {_sex},
+                onSelectionChanged: (s) => setState(() => _sex = s.first),
+              ),
+              if (_sex == 'femea')
+                SwitchListTile(
+                  title: const Text('Está no cio'),
+                  value: _inHeat,
+                  onChanged: (v) => setState(() => _inHeat = v),
+                ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _temperament,
+                decoration: const InputDecoration(labelText: 'Temperamento'),
+                items: [for (final e in temperaments.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+                onChanged: (v) => setState(() => _temperament = v!),
+              ),
+              SwitchListTile(
+                title: const Text('Costuma morder'),
+                value: _bites,
+                onChanged: (v) => setState(() => _bites = v),
+              ),
+              TextFormField(
+                controller: _likes,
+                decoration: const InputDecoration(labelText: 'Do que gosta (ex.: morder bolinha)'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _dislikes,
+                decoration: const InputDecoration(labelText: 'Do que não gosta (ex.: chinelo)'),
+              ),
+              const SizedBox(height: 20),
+              if (widget.dog == null)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Depois de salvar, registre as vacinas no perfil do cão. '
+                    'Sem V8/V10 e antirrábica em dia ele não aparece no Descobrir.',
+                  ),
+                ),
+              FilledButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Salvando...' : 'Salvar')),
+            ],
+          ),
         ),
       ),
     );

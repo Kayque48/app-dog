@@ -1,8 +1,9 @@
 <script>
-  // Descobrir: estilo Tinder. Arraste o cartão (ou use ← e →) para passar ou pedir um encontro.
+  // Descobrir: estilo Tinder. Arraste o cartão (ou use as setas do teclado) para passar ou pedir um encontro.
   import { onMount } from 'svelte';
   import { ageText, api, formatDistance, imageUrl, sexes, temperaments } from '../lib/api.js';
   import { go, showError, toast } from '../lib/state.svelte.js';
+  import Icon from '../lib/Icon.svelte';
 
   let myDogs = $state([]);
   let dogId = $state(null);
@@ -37,12 +38,13 @@
     dragX = 0;
     try {
       const r = await api('POST', '/swipes', { from_dog_id: dogId, to_dog_id: other.id, liked });
-      if (r.matched) toast(`Encontro combinado com ${other.name}! Veja o contato em Encontros. 🐾`);
+      if (r.matched) toast(`Encontro combinado com ${other.name}! Veja o contato em Encontros.`);
       else if (liked) toast(`Pedido enviado! Aguarde o dono de ${other.name} aceitar.`);
     } catch (e) { showError(e); }
   }
 
   function onKey(e) {
+    if (e.target.closest?.('input, select, textarea')) return;
     if (e.key === 'ArrowLeft') swipe(false);
     if (e.key === 'ArrowRight') swipe(true);
   }
@@ -58,8 +60,8 @@
 
 <svelte:window onkeydown={onKey} onpointermove={move} onpointerup={up} />
 
-<h1>Descobrir</h1>
-<div class="row wrap">
+<div class="page-header"><h1>Descobrir</h1></div>
+<div class="row wrap filters">
   {#if myDogs.length > 1}
     <label>Procurar amigos para
       <select bind:value={dogId} onchange={load}>
@@ -67,26 +69,39 @@
       </select>
     </label>
   {/if}
-  {#each [500, 1000, 3000] as r}
-    <button class:primary={radius === r} onclick={() => { radius = r; load(); }}>Até {formatDistance(r)}</button>
-  {/each}
+  <div class="segmented" role="group" aria-label="Distância">
+    {#each [500, 1000, 3000] as r}
+      <button class:selected={radius === r} onclick={() => { radius = r; load(); }}>
+        {#if radius === r}<Icon name="check" />{/if} Até {formatDistance(r)}
+      </button>
+    {/each}
+  </div>
 </div>
 
 {#if loading}
-  <p class="empty">Procurando cães por perto...</p>
+  <div class="empty"><Icon name="travel_explore" />Procurando cães por perto...</div>
 {:else if !dogId}
-  <p class="empty">Cadastre seu cão em <button class="link" onclick={() => go('dogs')}>Meus cães</button> para encontrar amigos.</p>
+  <div class="empty">
+    <Icon name="pets" />
+    <p>Cadastre seu cão para encontrar amigos.</p>
+    <button class="primary" onclick={() => go('dogs')}>Ir para Meus cães</button>
+  </div>
 {:else if blocked}
   <div class="empty">
-    <p class="bad">💉 {blocked}</p>
+    <Icon name={blocked.includes('localização') ? 'location_off' : 'vaccines'} />
+    <div class="card error blocked">{blocked}</div>
     {#if blocked.includes('localização')}
-      <button onclick={() => go('profile')}>Definir localização no Perfil</button>
+      <button class="primary" onclick={() => go('profile')}>Definir localização no Perfil</button>
     {:else}
       <button class="primary" onclick={() => go('dog', dogId)}>Abrir carteira de vacinação</button>
     {/if}
   </div>
 {:else if cards.length === 0}
-  <div class="empty"><p>Nenhum cão novo por perto agora. Tente aumentar a distância.</p><button onclick={load}>Atualizar</button></div>
+  <div class="empty">
+    <Icon name="search_off" />
+    <p>Nenhum cão novo por perto agora. Tente aumentar a distância.</p>
+    <button onclick={load}><Icon name="refresh" /> Atualizar</button>
+  </div>
 {:else}
   {@const d = cards[0]}
   <div class="stage">
@@ -97,38 +112,70 @@
       style="transform: translateX({dragX}px) rotate({dragX / 25}deg)"
       onpointerdown={down}
     >
-      {#if dragX > 40}<div class="stamp yes">QUERO CONHECER</div>{/if}
-      {#if dragX < -40}<div class="stamp no">PASSAR</div>{/if}
-      <div class="photo">{#if d.photo_url}<img src={imageUrl(d.photo_url)} alt="" draggable="false" />{:else}🐶{/if}</div>
-      {#if d.wants_to_meet_you}<span class="chip">❤️ Quer conhecer o seu cão!</span>{/if}
-      <h2>{d.name}, {ageText(d.age_years)}</h2>
-      <p>{d.breed} • {sexes[d.sex]} • a {formatDistance(d.distance_m)} • dono(a): {d.owner_first_name}</p>
-      <div>
-        <span class="chip">{temperaments[d.temperament]}</span>
-        <span class="chip">{d.bites ? '⚠️ Pode morder' : '✅ Não morde'}</span>
-        {#if d.in_heat}<span class="chip">No cio</span>{/if}
-        <span class="chip">💉 Vacinas em dia</span>
+      {#if dragX > 40}<div class="stamp yes"><Icon name="favorite" filled /> Quero conhecer</div>{/if}
+      {#if dragX < -40}<div class="stamp no"><Icon name="close" /> Passar</div>{/if}
+      <div class="photo">
+        {#if d.photo_url}<img src={imageUrl(d.photo_url)} alt="" draggable="false" />{:else}<Icon name="pets" filled size={96} />{/if}
       </div>
-      {#if d.likes}<p>Gosta de: {d.likes}</p>{/if}
-      {#if d.dislikes}<p>Não gosta de: {d.dislikes}</p>{/if}
-      <button class="link" onclick={() => go('dog', d.id)}>Ver perfil completo</button>
+      <div class="body">
+        {#if d.wants_to_meet_you}<span class="chip tonal"><Icon name="favorite" filled /> Quer conhecer o seu cão!</span>{/if}
+        <h2>{d.name}, {ageText(d.age_years)}</h2>
+        <p class="muted">{d.breed} · {sexes[d.sex]} · a {formatDistance(d.distance_m)} · dono(a) {d.owner_first_name}</p>
+        <div class="chips">
+          <span class="chip"><Icon name="mood" /> {temperaments[d.temperament]}</span>
+          {#if d.bites}
+            <span class="chip error"><Icon name="warning" /> Pode morder</span>
+          {:else}
+            <span class="chip"><Icon name="check_circle" /> Não morde</span>
+          {/if}
+          {#if d.in_heat}<span class="chip"><Icon name="info" /> No cio</span>{/if}
+          <span class="chip success"><Icon name="vaccines" /> Vacinas em dia</span>
+        </div>
+        {#if d.likes}<p><strong>Gosta de:</strong> {d.likes}</p>{/if}
+        {#if d.dislikes}<p><strong>Não gosta de:</strong> {d.dislikes}</p>{/if}
+        <button class="text profile" onclick={() => go('dog', d.id)}>Ver perfil completo</button>
+      </div>
     </div>
     <div class="row actions">
-      <button class="big danger" onclick={() => swipe(false)}>✖ Passar</button>
-      <button class="big primary" onclick={() => swipe(true)}>❤ Quero conhecer</button>
+      <button class="fab pass" onclick={() => swipe(false)} aria-label="Passar"><Icon name="close" size={36} /></button>
+      <button class="fab like" onclick={() => swipe(true)} aria-label="Quero conhecer"><Icon name="favorite" filled size={36} /></button>
     </div>
-    <p class="muted">Dica: arraste o cartão ou use as setas ← e → do teclado.</p>
+    <p class="muted hint">Arraste o cartão ou use as setas ← e → do teclado.</p>
   </div>
 {/if}
 
 <style>
-  .stage { max-width: 440px; margin: 16px auto; text-align: center; }
-  .swipe { position: relative; text-align: left; user-select: none; cursor: grab; touch-action: none; }
-  .photo { height: 280px; border-radius: 12px; background: var(--blue-light); display: grid; place-items: center; font-size: 5rem; overflow: hidden; margin-bottom: 12px; }
+  .filters { align-items: flex-end; }
+  .filters label { margin-bottom: 16px; }
+  .blocked { display: inline-block; max-width: 520px; margin-bottom: 16px; }
+  .stage { max-width: 440px; margin: 8px auto; text-align: center; }
+  .swipe { position: relative; text-align: left; user-select: none; cursor: grab; touch-action: none; padding: 0; overflow: hidden; border-radius: 28px; box-shadow: var(--md-elevation-2); }
+  .photo { height: 300px; background: var(--md-primary-container); color: var(--md-on-primary-container); display: grid; place-items: center; overflow: hidden; }
   .photo img { width: 100%; height: 100%; object-fit: cover; }
-  .stamp { position: absolute; top: 24px; padding: 6px 12px; border: 3px solid; border-radius: 8px; font-weight: bold; background: white; }
-  .stamp.yes { left: 24px; color: var(--green); }
-  .stamp.no { right: 24px; color: var(--red); }
-  .actions { justify-content: center; }
-  .big { font-size: 1.1rem; padding: 14px 24px; }
+  .body { padding: 16px 20px 8px; }
+  .body h2 { margin: 4px 0; }
+  .chips { margin: 12px 0 4px; }
+  strong { font-weight: 500; }
+  .profile { margin-left: -12px; }
+  .stamp {
+    position: absolute;
+    top: 24px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: var(--md-elevation-2);
+  }
+  .stamp.yes { left: 24px; background: var(--md-success-container); color: var(--md-on-success-container); }
+  .stamp.no { right: 24px; background: var(--md-error-container); color: var(--md-on-error-container); }
+  .actions { justify-content: center; gap: 32px; margin: 24px 0 8px; }
+  /* FABs grandes do M3 */
+  .fab { width: 96px; height: 96px; border-radius: 28px; border: none; box-shadow: var(--md-elevation-3); padding: 0; }
+  .fab :global(.icon) { margin: 0; }
+  .fab.pass { background: var(--md-error-container); color: var(--md-on-error-container); }
+  .fab.like { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+  .hint { font-size: 14px; }
 </style>

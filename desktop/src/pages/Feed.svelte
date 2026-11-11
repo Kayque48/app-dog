@@ -4,6 +4,7 @@
   import { go, showError, toast } from '../lib/state.svelte.js';
   import AdBanner from '../lib/AdBanner.svelte';
   import DogAvatar from '../lib/DogAvatar.svelte';
+  import Icon from '../lib/Icon.svelte';
 
   let posts = $state([]);
   let page = 0;
@@ -51,48 +52,63 @@
   }
 </script>
 
-<h1>Feed</h1>
+<div class="page-header"><h1>Feed</h1></div>
 <AdBanner />
 
 {#if myDogs.length}
-  <form class="card row wrap" onsubmit={publish}>
-    <select bind:value={newPost.dog_id} style="width:auto">
-      {#each myDogs as d}<option value={d.id}>{d.name}</option>{/each}
-    </select>
-    <input type="file" accept="image/*" style="width:auto" onchange={(e) => (newPost.file = e.target.files[0])} />
-    <input class="grow" placeholder="Legenda" bind:value={newPost.caption} style="width:auto" />
-    <button class="primary" disabled={sending}>{sending ? 'Publicando...' : 'Publicar foto'}</button>
+  <form class="card outlined publish" onsubmit={publish}>
+    <h3>Publicar foto</h3>
+    <div class="row wrap">
+      <label>Cão
+        <select bind:value={newPost.dog_id}>
+          {#each myDogs as d}<option value={d.id}>{d.name}</option>{/each}
+        </select>
+      </label>
+      <label>Foto <input type="file" accept="image/*" onchange={(e) => (newPost.file = e.target.files[0])} /></label>
+      <label class="grow">Legenda <input bind:value={newPost.caption} /></label>
+    </div>
+    <button class="primary" disabled={sending}><Icon name="add_a_photo" /> {sending ? 'Publicando...' : 'Publicar'}</button>
   </form>
 {/if}
 
 {#if posts.length === 0 && end}
-  <p class="empty">Ainda não há fotos. Seja o primeiro a publicar!</p>
+  <div class="empty"><Icon name="photo_camera" />Ainda não há fotos. Seja o primeiro a publicar!</div>
 {/if}
 
 <div class="posts">
   {#each posts as p (p.id)}
     <article class="card">
-      <button class="author link" onclick={() => go('dog', p.dog_id)}>
-        <DogAvatar photo={p.dog_photo_url} size={40} />
-        <span><strong>{p.dog_name}</strong><br /><small class="muted">{p.dog_breed}</small></span>
+      <button class="author text" onclick={() => go('dog', p.dog_id)}>
+        <DogAvatar photo={p.dog_photo_url} />
+        <span class="names"><span class="name">{p.dog_name}</span><small class="muted">{p.dog_breed}</small></span>
       </button>
       <img src={imageUrl(p.image_url)} alt={p.caption} ondblclick={() => !p.liked_by_me && like(p)} />
       <div class="row">
-        <button class="like" onclick={() => like(p)}>{p.liked_by_me ? '❤️' : '🤍'} {p.likes}</button>
-        <span>{p.caption}</span>
+        <button class="icon-btn" class:liked={p.liked_by_me} onclick={() => like(p)} aria-label="Curtir">
+          <Icon name="favorite" filled={p.liked_by_me} />
+        </button>
+        <span class="muted">{p.likes} curtida(s)</span>
       </div>
+      {#if p.caption}<p class="caption">{p.caption}</p>{/if}
     </article>
   {/each}
 </div>
 
 {#if !end && posts.length}
-  <button onclick={() => load()}>Carregar mais</button>
+  <div class="more"><button onclick={() => load()}>Carregar mais</button></div>
 {/if}
 
 <style>
+  .publish .row { align-items: flex-end; }
+  .publish label { margin-bottom: 12px; }
   .posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-  article { margin: 0; }
-  .author { display: flex; gap: 10px; align-items: center; text-decoration: none; color: inherit; text-align: left; margin-bottom: 8px; }
-  img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: var(--blue-light); }
-  .like { border: none; font-size: 1.1rem; padding: 6px 8px; }
+  article { margin: 0; padding: 0; overflow: hidden; }
+  .author { height: 72px; width: 100%; justify-content: flex-start; gap: 16px; padding: 0 16px; border-radius: 0; color: var(--md-on-surface); }
+  .names { display: flex; flex-direction: column; align-items: flex-start; }
+  .name { font-size: 16px; }
+  img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--md-surface-container-high); }
+  article .row { padding: 4px 8px 0; gap: 4px; }
+  .liked { color: var(--md-error); }
+  .caption { padding: 0 16px 16px; }
+  .more { text-align: center; margin-top: 16px; }
 </style>
