@@ -38,6 +38,31 @@ Os dois apps seguem o **Material 3 Expressive**: formas orgânicas ("cookie", fl
 | Cores azul fraquinho e branco                                        | Paleta azul e amarela, as cores que o cachorro enxerga, mantendo o azul claro do cliente     |
 | LGPD                                                                 | Aceite dos termos no cadastro, exclusão de conta, CPF e telefone visíveis só para a moderação, localização exata nunca mostrada (só a distância) |
 
+## Funcionalidades extras (documento de funcionalidades)
+
+Além da entrevista, o grupo mandou um documento de funcionalidades. Entrou tudo que não conflita com o que o cliente pediu:
+
+| Funcionalidade | Como ficou |
+|---|---|
+| Perfil completo do cão | Peso, cor, descrição, nível de atividade e o que ele procura (amizade, cruzamento ou os dois) |
+| Pedigree | O dono envia o documento, a moderação verifica e o cão ganha o selo "Pedigree verificado" |
+| Carteira digital | Identidade pet (microchip, castração, peso, alergias, saúde), vacinas e documentos (pedigree, exames, RG animal, receitas). Os documentos só aparecem para o dono |
+| Match para cruzamento | No Descobrir, o modo "Cruzamento" mostra só cães do sexo oposto, não castrados e que também procuram cruzamento. Cão castrado não pode marcar cruzamento |
+| Som de latido no match | "Au au!" ao dar match (sintetizado no desktop, arquivo `au_au.wav` no mobile) |
+| Eventos | Desfiles, corridas, festas, encontros, concursos, **feiras de adoção** e **competições** (força, agilidade). Têm "Vou / Talvez", concurso com votação e pódio, e regras como "só fêmeas" ou "só Dachshund" |
+| Serviços | Veterinários, banho e tosa, pet shops, adestradores, passeadores, hotéis, criadores e ONGs de adoção, por distância. Têm ligar, WhatsApp, mapa e **agendamento** (o estabelecimento confirma por telefone). Qualquer um cadastra o próprio negócio e a moderação dá o selo de verificado |
+| Loja | Catálogo dos pet shops parceiros por categoria (roupas, alimentos, brinquedos, acessórios, higiene). A compra é combinada pelo WhatsApp ou pelo site da loja |
+| Feed | Fotos e **vídeos** (tocam sozinhos, sem som), curtidas e **comentários** |
+
+O que **não** entrou, por conflitar com a entrevista:
+
+| Item do documento | Motivo |
+|---|---|
+| Nome "Fatal Dog" | O cliente deu ao app o nome **All Love** |
+| Rastreamento do cão por dispositivo GPS | O cliente pediu segurança, e "pedir localização" foi um dos motivos de denúncia que ele citou. O app nunca mostra a posição exata de ninguém, só a distância aproximada. Além disso, exigiria um hardware |
+| Loja com pagamento dentro do app | O cliente quer ganhar com anúncios, patrocínio de pet shops e premium (ainda sem pagamento definido). Por isso a loja é um catálogo de parceiros |
+| Intermediação de cruzamento em clínicas | Virou um serviço que a clínica oferece ("Acompanhamento de cruzamento") e que o dono agenda como qualquer outro |
+
 ## Como rodar
 
 ### 1. API (`backend/`)
@@ -68,7 +93,15 @@ Para dar uma noção do app funcionando, a API cria 8 donos com cães perto do P
 | `rafaela@demo.local` | Bidu (Buldogue Francês)      | **Vacinas atrasadas**: o Bidu fica bloqueado no Descobrir                            |
 | `carlos@demo.local`  | Rex (vira-lata, agressivo)   | Incidente confirmado no histórico e uma denúncia aberta na moderação                 |
 
-O feed vem com 7 fotos e curtidas. Os parques de exemplo ficam em São Paulo e os anúncios são de pet shops fictícios.
+O feed vem com 7 fotos, curtidas e comentários. Também vêm prontos:
+
+- **8 eventos**, entre eles o desfile de cadelas, a corrida de salsichas, a feira de adoção e o cabo de guerra.
+- **8 profissionais e estabelecimentos**: o "Passeios do Lucas" ainda espera verificação na moderação.
+- **7 produtos** na loja.
+- **Pedigrees:** o do Thor já está verificado e o do Bento espera análise.
+- **Um agendamento confirmado** para o Thor.
+
+Os parques de exemplo ficam em São Paulo; os anúncios, pet shops e clínicas são fictícios.
 
 Variáveis opcionais:
 
@@ -153,6 +186,8 @@ As fotos dos dados de exemplo são do [Unsplash](https://unsplash.com) e são ca
 | Bidu | [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev) |
 | Rex | [Random Thinking](https://unsplash.com/@randomthinking) |
 | Nina | [Meagan Barr](https://unsplash.com/@megz_barr) |
+| Capas dos eventos | [Helena Lopes](https://unsplash.com/@helenalopesph), [Kojirou Sasaki](https://unsplash.com/@chelsea777), [Inc inductgroup](https://unsplash.com/@sofia_induct), [Paige Cody](https://unsplash.com/@paige_cody), [Ayla Verschueren](https://unsplash.com/@moob), [Xennie Moore](https://unsplash.com/@shadowseas), [Madeline Bowen](https://unsplash.com/@madelinebowen), [Nico Knaack](https://unsplash.com/@xoxnk) |
+| Produtos da loja | [Kariso ou](https://unsplash.com/@karisou), [Hugo Michael](https://unsplash.com/@toolsuite12), [Giacomo Lucarini](https://unsplash.com/@lucarinigiac) |
 | Fotos do feed | [keila Paludo](https://unsplash.com/@keilapaludo), [Jackie Best](https://unsplash.com/@bugsandslugs), [Denis Bayer](https://unsplash.com/@denisbayer), [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev), [David Valentine](https://unsplash.com/@thephotochad), [Gosia Jamrozik](https://unsplash.com/@gosiaj), [yu wang](https://unsplash.com/@boboguai2) |
 
 A fonte [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) usa a licença SIL Open Font License (`mobile/assets/fonts/BricolageGrotesque-OFL.txt`).

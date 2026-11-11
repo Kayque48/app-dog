@@ -1,8 +1,10 @@
 mod discover;
 mod dogs;
+mod events;
 mod feed;
 mod moderation;
 mod places;
+mod services;
 mod users;
 
 use axum::{
@@ -34,17 +36,33 @@ pub fn router() -> Router<AppState> {
         .route("/dogs/{id}", get(dogs::profile).put(dogs::update).delete(dogs::remove))
         .route("/dogs/{id}/vaccines", get(dogs::list_vaccines).post(dogs::add_vaccine))
         .route("/vaccines/{id}", delete(dogs::delete_vaccine))
+        .route("/dogs/{id}/documents", get(dogs::list_documents).post(dogs::add_document))
+        .route("/documents/{id}", delete(dogs::delete_document))
         // feed
         .route("/uploads", post(feed::upload))
         .route("/feed", get(feed::feed))
         .route("/posts", post(feed::create_post))
         .route("/posts/{id}", delete(feed::delete_post))
         .route("/posts/{id}/like", post(feed::toggle_like))
+        .route("/posts/{id}/comments", get(feed::list_comments).post(feed::add_comment))
+        .route("/comments/{id}", delete(feed::delete_comment))
         // descobrir / encontros
         .route("/discover", get(discover::discover))
         .route("/swipes", post(discover::swipe))
         .route("/matches", get(discover::matches))
         .route("/matches/{id}/respond", post(discover::respond))
+        // eventos (desfiles, corridas, festas)
+        .route("/events", get(events::list).post(events::create))
+        .route("/events/{id}", get(events::detail))
+        .route("/events/{id}/rsvp", post(events::rsvp))
+        .route("/events/{id}/entries", post(events::enter))
+        .route("/events/{id}/vote", post(events::vote))
+        // profissionais, agendamentos e loja
+        .route("/providers", get(services::list).post(services::create))
+        .route("/providers/{id}", get(services::detail))
+        .route("/appointments", get(services::my_appointments).post(services::book))
+        .route("/appointments/{id}/cancel", post(services::cancel))
+        .route("/products", get(services::products))
         // locais e anúncios
         .route("/places", get(places::nearby).post(places::create))
         .route("/ads/random", get(places::random_ad))
@@ -54,6 +72,10 @@ pub fn router() -> Router<AppState> {
         .route("/admin/reports/{id}/resolve", post(moderation::resolve_report))
         .route("/admin/users", get(moderation::list_users))
         .route("/admin/users/{id}/ban", post(moderation::ban_user))
+        .route("/admin/pedigrees", get(moderation::pending_pedigrees))
+        .route("/admin/pedigrees/{id}/review", post(moderation::review_pedigree))
+        .route("/admin/providers", get(moderation::pending_providers))
+        .route("/admin/providers/{id}/verify", post(services::verify))
 }
 
 // ---------- tipos e funções compartilhados pelas rotas ----------
@@ -74,10 +96,20 @@ pub struct DogRow {
     pub photo_url: Option<String>,
     pub removed_at: Option<String>,
     pub created_at: String,
+    pub weight_kg: Option<f64>,
+    pub color: String,
+    pub bio: String,
+    pub activity_level: String,
+    pub looking_for: String,
+    pub microchip: String,
+    pub neutered: bool,
+    pub allergies: String,
+    pub health_notes: String,
 }
 
 pub const DOG_COLUMNS: &str = "d.id, d.owner_id, d.name, d.breed, d.birth_date, d.sex, d.in_heat, d.temperament, \
-     d.bites, d.likes, d.dislikes, d.photo_url, d.removed_at, d.created_at";
+     d.bites, d.likes, d.dislikes, d.photo_url, d.removed_at, d.created_at, d.weight_kg, d.color, d.bio, \
+     d.activity_level, d.looking_for, d.microchip, d.neutered, d.allergies, d.health_notes";
 
 /// Cão como é enviado para os apps: dados + idade + situação vacinal.
 #[derive(Serialize)]
@@ -86,6 +118,8 @@ pub struct DogView {
     pub dog: DogRow,
     pub age_years: i64,
     pub vaccine_status: VaccineStatus,
+    /// Pedigree enviado e verificado pela moderação.
+    pub pedigree_verified: bool,
 }
 
 pub fn today() -> chrono::NaiveDate {
@@ -97,7 +131,12 @@ pub async fn dog_view(db: &SqlitePool, dog: DogRow) -> AppResult<DogView> {
     let age_years = rules::parse_date(&dog.birth_date)
         .map(|b| rules::age_years(b, today()))
         .unwrap_or(0);
-    Ok(DogView { dog, age_years, vaccine_status })
+    let (pedigree,): (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM dog_documents WHERE dog_id = ? AND kind = 'pedigree' AND status = 'verificado'")
+            .bind(dog.id)
+            .fetch_one(db)
+            .await?;
+    Ok(DogView { dog, age_years, vaccine_status, pedigree_verified: pedigree > 0 })
 }
 
 pub async fn vaccine_status_of(db: &SqlitePool, dog_id: i64) -> AppResult<VaccineStatus> {

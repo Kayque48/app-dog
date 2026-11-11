@@ -12,18 +12,27 @@
   import Owner from './pages/Owner.svelte';
   import Profile from './pages/Profile.svelte';
   import Admin from './pages/Admin.svelte';
+  import Events from './pages/Events.svelte';
+  import EventDetail from './pages/EventDetail.svelte';
+  import Services from './pages/Services.svelte';
+  import Shop from './pages/Shop.svelte';
   import Icon from './lib/Icon.svelte';
 
   const menu = [
     ['feed', 'photo_library', 'Feed'],
     ['discover', 'swipe', 'Descobrir'],
+    ['events', 'celebration', 'Eventos'],
     ['matches', 'favorite', 'Encontros'],
     ['places', 'park', 'Parques'],
+    ['services', 'medical_services', 'Serviços'],
+    ['shop', 'storefront', 'Loja'],
     ['dogs', 'pets', 'Meus cães'],
     ['profile', 'person', 'Perfil'],
   ];
   // páginas de detalhe deixam o item de origem marcado
-  const section = $derived(app.page === 'dog' ? 'dogs' : app.page === 'owner' ? 'matches' : app.page);
+  const section = $derived(
+    app.page === 'dog' ? 'dogs' : app.page === 'owner' ? 'matches' : app.page === 'event' ? 'events' : app.page,
+  );
 
   onMount(() => {
     (async () => {
@@ -80,6 +89,10 @@
         {:else if app.page === 'discover'}<Discover />
         {:else if app.page === 'matches'}<Matches />
         {:else if app.page === 'places'}<Places />
+        {:else if app.page === 'events'}<Events />
+        {:else if app.page === 'services'}<Services />
+        {:else if app.page === 'shop'}<Shop />
+        {:else if app.page === 'event'}<EventDetail id={app.param} />
         {:else if app.page === 'dogs'}<MyDogs />
         {:else if app.page === 'dog'}<DogDetail id={app.param} />
         {:else if app.page === 'owner'}<Owner id={app.param} />

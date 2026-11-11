@@ -39,6 +39,9 @@ dependencies:
   image_picker: ^1.2.4
   geolocator: ^14.1.2
   url_launcher: ^6.3.3
+  video_player: ^2.14.1
+  file_picker: ^13.3.3
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +64,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/sounds/
 
   # Fonte expressiva dos títulos (variável; licença em assets/fonts/BricolageGrotesque-OFL.txt)
   fonts:

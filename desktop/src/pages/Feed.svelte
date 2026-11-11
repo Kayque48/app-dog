@@ -3,9 +3,10 @@
   // blocos misturados (cães perto, parque do dia, anúncio), curtida animada,
   // rolagem infinita e aviso de fotos novas.
   import { onMount } from 'svelte';
-  import { ageText, api, formatDistance, imageUrl, upload } from '../lib/api.js';
+  import { ageText, api, eventDate, eventKinds, formatDistance, imageUrl, upload } from '../lib/api.js';
   import { app, go, showError, toast } from '../lib/state.svelte.js';
   import AdBanner from '../lib/AdBanner.svelte';
+  import Comments from '../lib/Comments.svelte';
   import DogAvatar from '../lib/DogAvatar.svelte';
   import Icon from '../lib/Icon.svelte';
 
@@ -16,12 +17,14 @@
   let myDogs = $state([]);
   let nearby = $state([]);
   let park = $state(null);
+  let nextEvents = $state([]);
   let composer = $state(false);
   let newPost = $state({ dog_id: null, caption: '', file: null });
   let sending = $state(false);
   let fresh = $state(0); // fotos novas desde que a página abriu
   let hearts = $state({}); // coração gigante do toque duplo, por post
   let popped = $state(null);
+  let openComments = $state({}); // id do post -> comentários abertos
   let sentinel;
 
   // "stories": um círculo por cão que postou recentemente
@@ -48,6 +51,7 @@
       newPost.dog_id = myDogs[0]?.id ?? null;
       if (myDogs[0]) nearby = (await api('GET', `/discover?dog_id=${myDogs[0].id}&radius_m=1000`).catch(() => [])).slice(0, 8);
       park = (await api('GET', '/places?limit=1').catch(() => []))[0] ?? null;
+      nextEvents = (await api('GET', '/events').catch(() => [])).slice(0, 4);
     })();
     // rolagem infinita
     const io = new IntersectionObserver((entries) => entries[0].isIntersecting && load(), { rootMargin: '600px' });
@@ -77,7 +81,7 @@
 
   async function publish(e) {
     e.preventDefault();
-    if (!newPost.file) return toast('Escolha uma foto');
+    if (!newPost.file) return toast('Escolha uma foto ou um vídeo');
     sending = true;
     try {
       const url = await upload(newPost.file);
@@ -99,7 +103,13 @@
   <article class="post rise" class:hero={i === 0} style="animation-delay: {Math.min(i, 6) * 40}ms">
     <div class="media r{i % 4}" ondblclick={() => doubleTap(p)} role="presentation">
       <Icon name="pets" filled size={i === 0 ? 140 : 80} />
-      <img src={imageUrl(p.image_url)} alt="" loading="lazy" />
+      {#if p.media_type === 'video'}
+        <!-- vídeos tocam sozinhos, sem som, em loop (como num feed de rede social) -->
+        <video src={imageUrl(p.image_url)} autoplay muted loop playsinline></video>
+        <span class="video-badge"><Icon name="play_circle" filled /></span>
+      {:else}
+        <img src={imageUrl(p.image_url)} alt="" loading="lazy" />
+      {/if}
       {#key hearts[p.id]}
         {#if hearts[p.id]}<span class="big-heart"><Icon name="favorite" filled size={i === 0 ? 180 : 120} /></span>{/if}
       {/key}
@@ -115,12 +125,16 @@
         <span class="shape-cookie12 mini"><DogAvatar photo={p.dog_photo_url} size={40} /></span>
         <span class="names"><span class="name">{p.dog_name}</span><small class="muted">{p.dog_breed} · {ago(p.created_at)}</small></span>
       </button>
+      <button class="like-btn" class:open={openComments[p.id]} onclick={() => (openComments[p.id] = !openComments[p.id])} aria-label="Comentários">
+        <Icon name="chat_bubble" filled={openComments[p.id]} /> <strong>{p.comments}</strong>
+      </button>
       <button class="like-btn" class:liked={p.liked_by_me} onclick={() => like(p)} aria-label="Curtir">
         <span class:pop={popped === p.id}><Icon name="favorite" filled={p.liked_by_me} /></span>
         <strong>{p.likes}</strong>
       </button>
     </div>
     {#if p.caption && i !== 0}<p class="caption">{p.caption}</p>{/if}
+    {#if openComments[p.id]}<Comments postId={p.id} oncount={(n) => (p.comments = n)} />{/if}
   </article>
 {/snippet}
 
@@ -155,7 +169,7 @@
       <label>Cão
         <select bind:value={newPost.dog_id}>{#each myDogs as d}<option value={d.id}>{d.name}</option>{/each}</select>
       </label>
-      <label>Foto <input type="file" accept="image/*" onchange={(e) => (newPost.file = e.target.files[0])} /></label>
+      <label>Foto ou vídeo <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onchange={(e) => (newPost.file = e.target.files[0])} /></label>
       <label class="grow">Legenda <input bind:value={newPost.caption} placeholder="Conta tudo!" /></label>
     </div>
     <button class="primary big" disabled={sending}><Icon name="send" /> {sending ? 'Publicando...' : 'Publicar'}</button>
@@ -204,6 +218,27 @@
           <span>a {formatDistance(park.distance_m)} de você. Bora levar o {myDogs[0]?.name ?? 'seu cão'}?</span>
         </div>
         <button class="big dark" onclick={() => go('places')}>Ver parques</button>
+      </section>
+    {/if}
+
+    {#if i === 3 && nextEvents.length}
+      <section class="module events rise">
+        <div class="row">
+          <h2 class="grow">Rolês que vêm aí 🎉</h2>
+          <button class="tonal" onclick={() => go('events')}>Todos os eventos <Icon name="arrow_forward" /></button>
+        </div>
+        <div class="ev-row">
+          {#each nextEvents as ev (ev.id)}
+            {@const dt = eventDate(ev.starts_at)}
+            <button class="ev" onclick={() => go('event', ev.id)}>
+              <span class="ev-cover"><Icon name={eventKinds[ev.kind].icon} filled size={48} />{#if ev.cover_url}<img src={imageUrl(ev.cover_url)} alt="" />{/if}
+                <span class="ev-date"><strong>{dt.day}</strong>{dt.month}</span>
+              </span>
+              <strong class="ev-title">{ev.title}</strong>
+              <small>{dt.countdown} · {ev.going} vão{ev.has_contest ? ' · 🏆' : ''}</small>
+            </button>
+          {/each}
+        </div>
       </section>
     {/if}
 
@@ -296,6 +331,9 @@
   .media.r2 { border-radius: 24px 80px 24px 80px; }
   .media.r3 { border-radius: 50% 50% 28px 28px; aspect-ratio: 4 / 5; }
   .hero .media { aspect-ratio: 16 / 9; border-radius: 56px 56px 56px 12px; }
+  .media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .video-badge { position: absolute; top: 14px; right: 14px; color: #fff; filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.5)); z-index: 1; }
+  .like-btn.open { background: var(--md-primary-container); color: var(--md-on-primary-container); }
   .media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s; }
   .media:hover img { transform: scale(1.04); }
   .big-heart { position: absolute; color: var(--like); filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.35)); animation: big-heart 0.9s ease-out forwards; z-index: 2; }
@@ -375,6 +413,16 @@
   }
   .requests p { flex: 1; margin: 0; font-size: 34px; line-height: 38px; }
 
+  .events { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); border-radius: var(--radius-xxl); padding: 20px 24px; }
+  .events h2 { margin: 0; }
+  .ev-row { display: flex; gap: 16px; overflow-x: auto; padding-top: 16px; }
+  .ev { flex-direction: column; align-items: flex-start; height: auto; padding: 0; border: none; gap: 4px; color: inherit; width: 220px; flex-shrink: 0; white-space: normal; text-align: left; }
+  .ev::after { display: none; }
+  .ev-cover { position: relative; width: 220px; height: 140px; border-radius: 32px 32px 32px 8px; overflow: hidden; display: grid; place-items: center; background: var(--md-primary-container); color: var(--md-on-primary-container); }
+  .ev-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .ev-date { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 16px; background: var(--like); color: #231b00; font-size: 11px; font-weight: 800; line-height: 1; }
+  .ev-date strong { font-family: var(--font-display); font-size: 22px; }
+  .ev-title { font-family: var(--font-display); font-size: 18px; line-height: 21px; }
   .sentinel { text-align: center; padding: 32px; min-height: 40px; }
   @media (max-width: 760px) {
     .top h1, .hero-caption { font-size: 36px; line-height: 40px; }

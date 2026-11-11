@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../main.dart' show likeYellow;
 import '../models.dart';
+import 'dog_wallet.dart';
 import '../widgets.dart';
 import 'dog_form_screen.dart';
 import 'owner_screen.dart';
@@ -205,6 +207,36 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
                       Chip(label: Text(dog.bites ? 'Pode morder' : 'Não morde')),
                     ],
                   ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.bolt, size: 18),
+                        label: Text(activityLevels[dog.activityLevel] ?? ''),
+                      ),
+                      Chip(
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        avatar: Icon(dog.lookingFor == 'amizade' ? Icons.diversity_1 : Icons.favorite, size: 18),
+                        label: Text(lookingForLabels[dog.lookingFor] ?? ''),
+                      ),
+                      if (dog.pedigreeVerified)
+                        const Chip(
+                          backgroundColor: likeYellow,
+                          avatar: Icon(Icons.verified, size: 18, color: Color(0xFF231B00)),
+                          label: Text('Pedigree verificado', style: TextStyle(color: Color(0xFF231B00))),
+                        ),
+                      if (dog.weightKg != null)
+                        Chip(avatar: const Icon(Icons.scale, size: 18), label: Text('${dog.weightKg} kg')),
+                      if (dog.color.isNotEmpty)
+                        Chip(avatar: const Icon(Icons.palette, size: 18), label: Text(dog.color)),
+                    ],
+                  ),
+                  if (dog.bio.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text('“${dog.bio}”', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16)),
+                    ),
                   if (dog.likes.isNotEmpty) Text('Gosta de: ${dog.likes}'),
                   if (dog.dislikes.isNotEmpty) Text('Não gosta de: ${dog.dislikes}'),
                   const Divider(height: 32),
@@ -247,6 +279,8 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
                         '${v['next_due'] != null ? ' • reforço em ${formatDate(v['next_due'])}' : ''}',
                       ),
                     ),
+                  const Divider(height: 32),
+                  DogWallet(dog: dog, isMine: _isMine && !dog.removed),
                   const Divider(height: 32),
                   Text('Histórico', style: t.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                   for (final h in history)

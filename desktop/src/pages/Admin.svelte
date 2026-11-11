@@ -1,7 +1,7 @@
 <script>
   // Moderação: analisar denúncias e bloquear contas permanentemente.
   import { onMount } from 'svelte';
-  import { api, formatDate, reportReasons } from '../lib/api.js';
+  import { api, formatDate, imageUrl, providerKinds, reportReasons } from '../lib/api.js';
   import { go, showError, toast } from '../lib/state.svelte.js';
   import Icon from '../lib/Icon.svelte';
 
@@ -10,10 +10,23 @@
   let reports = $state([]);
   let users = $state([]);
   let q = $state('');
+  let pedigrees = $state([]);
+  let pendingProviders = $state([]);
+  const loadPending = async () => {
+    pedigrees = await api('GET', '/admin/pedigrees').catch(() => []);
+    pendingProviders = await api('GET', '/admin/providers').catch(() => []);
+  };
+
+  async function review(x, approved) {
+    try { await api('POST', `/admin/pedigrees/${x.id}/review`, { approved }); toast(approved ? 'Pedigree verificado' : 'Pedigree recusado'); loadPending(); } catch (e) { showError(e); }
+  }
+  async function verifyProvider(p) {
+    try { await api('POST', `/admin/providers/${p.id}/verify`); toast(`${p.name} verificado`); loadPending(); } catch (e) { showError(e); }
+  }
 
   const loadReports = async () => (reports = await api('GET', `/admin/reports?status=${status}`).catch((e) => (showError(e), [])));
   const searchUsers = async () => (users = await api('GET', `/admin/users?q=${encodeURIComponent(q)}`).catch((e) => (showError(e), [])));
-  onMount(() => { loadReports(); searchUsers(); });
+  onMount(() => { loadReports(); searchUsers(); loadPending(); });
 
   async function resolve(r, procedente, ban) {
     const what = !procedente ? 'arquivar esta denúncia' : ban ? `confirmar e BLOQUEAR ${r.target_name} permanentemente` : 'confirmar a denúncia sem bloquear';
@@ -42,9 +55,40 @@
 <div class="tabs" role="tablist">
   <button role="tab" class:active={tab === 'reports'} onclick={() => (tab = 'reports')}><Icon name="flag" /> Denúncias</button>
   <button role="tab" class:active={tab === 'users'} onclick={() => (tab = 'users')}><Icon name="group" /> Donos</button>
+  <button role="tab" class:active={tab === 'pedigrees'} onclick={() => (tab = 'pedigrees')}><Icon name="workspace_premium" /> Pedigrees {#if pedigrees.length}<span class="badge">{pedigrees.length}</span>{/if}</button>
+  <button role="tab" class:active={tab === 'providers'} onclick={() => (tab = 'providers')}><Icon name="storefront" /> Profissionais {#if pendingProviders.length}<span class="badge">{pendingProviders.length}</span>{/if}</button>
 </div>
 
-{#if tab === 'reports'}
+{#if tab === 'pedigrees'}
+  {#each pedigrees as x (x.id)}
+    <div class="card outlined row wrap">
+      <Icon name="workspace_premium" size={36} />
+      <div class="grow">
+        <strong>{x.title}</strong><br />
+        <small class="muted">{x.dog_name} ({x.dog_breed}) · dono(a) {x.owner_name} · {formatDate(x.created_at)}</small>
+      </div>
+      <button class="text" onclick={() => window.open(imageUrl(x.file_url), '_blank')}><Icon name="open_in_new" /> Ver documento</button>
+      <button class="danger" onclick={() => review(x, false)}>Recusar</button>
+      <button class="primary" onclick={() => review(x, true)}><Icon name="verified" /> Verificar</button>
+    </div>
+  {:else}
+    <div class="empty"><Icon name="task_alt" />Nenhum pedigree esperando análise.</div>
+  {/each}
+{:else if tab === 'providers'}
+  {#each pendingProviders as p (p.id)}
+    <div class="card outlined row wrap">
+      <Icon name={providerKinds[p.kind]?.icon ?? 'store'} size={36} />
+      <div class="grow">
+        <strong>{p.name}</strong> <span class="chip tonal">{providerKinds[p.kind]?.label}</span><br />
+        <small class="muted">Tel. {p.phone} · {p.address} · cadastrado por {p.owner_name ?? 'sistema'}</small><br />
+        <small>{p.services}</small>
+      </div>
+      <button class="primary" onclick={() => verifyProvider(p)}><Icon name="verified" /> Dar selo de verificado</button>
+    </div>
+  {:else}
+    <div class="empty"><Icon name="task_alt" />Nenhum profissional esperando verificação.</div>
+  {/each}
+{:else if tab === 'reports'}
   <div class="segmented" role="group" aria-label="Situação">
     {#each [['aberta', 'Em aberto'], ['procedente', 'Procedentes'], ['improcedente', 'Improcedentes']] as [k, v]}
       <button class:selected={status === k} onclick={() => { status = k; loadReports(); }}>
@@ -126,6 +170,7 @@
     padding: 0 24px;
   }
   .tabs button.active { color: var(--md-primary); border-bottom-color: var(--md-primary); }
+  .tabs .badge { margin-left: 4px; }
   .small { font-size: 14px; line-height: 20px; }
   .people { margin: 12px 0; gap: 12px; }
   .people .card { margin: 0; }

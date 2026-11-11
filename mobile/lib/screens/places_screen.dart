@@ -8,7 +8,10 @@ import '../widgets.dart';
 
 /// Parques e pontos de encontro próximos (os 5 mais perto).
 class PlacesScreen extends StatefulWidget {
-  const PlacesScreen({super.key});
+  const PlacesScreen({super.key, this.embedded = false});
+
+  /// Dentro da aba "Rolês" a tela não mostra a própria barra de título.
+  final bool embedded;
 
   @override
   State<PlacesScreen> createState() => _PlacesScreenState();
@@ -95,7 +98,7 @@ class _PlacesScreenState extends State<PlacesScreen> {
   Widget build(BuildContext context) {
     final places = _places;
     return Scaffold(
-      appBar: AppBar(title: const Text('Parques e pontos de encontro')),
+      appBar: widget.embedded ? null : AppBar(title: const Text('Parques e pontos de encontro')),
       floatingActionButton: FloatingActionButton(onPressed: _addPlace, child: const Icon(Icons.add_location_alt)),
       body: _error != null
           ? EmptyState(

@@ -36,7 +36,12 @@ pub async fn seed(pool: &SqlitePool) {
         .await
         .unwrap();
     if exists.is_some() {
-        return; // já foi semeado
+        // banco já semeado; bancos antigos ganham os eventos de exemplo quando eles ainda não existem
+        if demo_enabled() {
+            crate::demo::seed_events_if_missing(pool).await;
+            crate::demo::seed_extras_if_missing(pool).await;
+        }
+        return;
     }
 
     sqlx::query(
@@ -86,8 +91,14 @@ pub async fn seed(pool: &SqlitePool) {
             .unwrap();
     }
 
-    if std::env::var("SEED_DEMO").map(|v| v != "0").unwrap_or(true) {
+    if demo_enabled() {
         crate::demo::seed(pool).await;
+        crate::demo::seed_events_if_missing(pool).await;
+        crate::demo::seed_extras_if_missing(pool).await;
     }
     tracing::info!("dados iniciais criados (admin: {admin_email})");
+}
+
+fn demo_enabled() -> bool {
+    std::env::var("SEED_DEMO").map(|v| v != "0").unwrap_or(true)
 }

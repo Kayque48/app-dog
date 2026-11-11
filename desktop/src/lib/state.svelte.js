@@ -3,7 +3,7 @@ import { api, setToken } from './api.js';
 
 export const app = $state({
   me: null,
-  page: 'feed', // feed | discover | matches | places | dogs | dog | owner | profile | admin
+  page: 'feed', // feed | discover | events | event | matches | places | services | shop | dogs | dog | owner | profile | admin
   param: null, // id do cão ou do dono nas páginas de detalhe
   toast: null,
   counts: { requests: 0 }, // pedidos de encontro esperando resposta (badge no menu)

@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -21,6 +22,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   List<Dog> _cards = [];
   int _radius = 500;
   int _seen = 0; // quantos cartões já passaram
+  String _goal = 'amizade'; // amizade | cruzamento
   bool _loading = true;
   String? _blocked; // mensagem quando o cão está bloqueado (vacinas) ou sem localização
 
@@ -52,7 +54,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       _blocked = null;
     });
     try {
-      final data = await Api.instance.get('/discover?dog_id=${dog.id}&radius_m=$_radius');
+      final data = await Api.instance.get('/discover?dog_id=${dog.id}&radius_m=$_radius&goal=$_goal');
       _cards = (data as List).map((j) => Dog.fromJson(j)).toList();
     } on ApiException catch (e) {
       if (e.status == 400 || e.status == 403) {
@@ -126,6 +128,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     },
                   ),
                 ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'amizade', icon: Icon(Icons.diversity_1), label: Text('Amizade')),
+                    ButtonSegment(value: 'cruzamento', icon: Icon(Icons.favorite), label: Text('Cruzamento')),
+                  ],
+                  selected: {_goal},
+                  onSelectionChanged: (s) {
+                    _goal = s.first;
+                    _loadCards();
+                  },
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: SegmentedButton<int>(
@@ -339,6 +355,17 @@ class _DogCard extends StatelessWidget {
                   avatar: const Icon(Icons.vaccines, size: 18),
                   label: const Text('Vacinas em dia'),
                 ),
+                Chip(avatar: const Icon(Icons.bolt, size: 18), label: Text(activityLevels[dog.activityLevel] ?? '')),
+                Chip(
+                  avatar: Icon(dog.lookingFor == 'amizade' ? Icons.diversity_1 : Icons.favorite, size: 18),
+                  label: Text(lookingForLabels[dog.lookingFor] ?? ''),
+                ),
+                if (dog.pedigreeVerified)
+                  const Chip(
+                    backgroundColor: likeYellow,
+                    avatar: Icon(Icons.verified, size: 18, color: Color(0xFF231B00)),
+                    label: Text('Pedigree', style: TextStyle(color: Color(0xFF231B00))),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -406,9 +433,18 @@ class MatchScreen extends StatefulWidget {
 
 class _MatchScreenState extends State<MatchScreen> with SingleTickerProviderStateMixin {
   late final _anim = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+  final _player = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    // "Au au!" ao dar match
+    _player.play(AssetSource('sounds/au_au.wav')).catchError((_) {});
+  }
 
   @override
   void dispose() {
+    _player.dispose();
     _anim.dispose();
     super.dispose();
   }
@@ -448,6 +484,10 @@ class _MatchScreenState extends State<MatchScreen> with SingleTickerProviderStat
                     Text(
                       'Deu match!',
                       style: display(Theme.of(context).textTheme.displayLarge)?.copyWith(color: likeYellow),
+                    ),
+                    Text(
+                      'AU AU! 🐶',
+                      style: display(Theme.of(context).textTheme.headlineMedium)?.copyWith(color: Colors.white),
                     ),
                     const SizedBox(height: 24),
                     Row(

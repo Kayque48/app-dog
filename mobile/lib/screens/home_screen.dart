@@ -7,7 +7,7 @@ import '../widgets.dart';
 import 'discover_screen.dart';
 import 'feed_screen.dart';
 import 'matches_screen.dart';
-import 'places_screen.dart';
+import 'events_screen.dart';
 import 'profile_screen.dart';
 
 /// Tela principal com as 5 abas. Em tablets usa uma barra lateral.
@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     (Icons.photo_library_outlined, Icons.photo_library, 'Feed'),
     (Icons.style_outlined, Icons.style, 'Descobrir'),
     (Icons.favorite_border, Icons.favorite, 'Encontros'),
-    (Icons.park_outlined, Icons.park, 'Parques'),
+    (Icons.explore_outlined, Icons.explore, 'Explorar'),
     (Icons.person_outline, Icons.person, 'Perfil'),
   ];
 
@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
     0 => FeedScreen(onOpenTab: _select),
     1 => const DiscoverScreen(),
     2 => const MatchesScreen(),
-    3 => const PlacesScreen(),
+    3 => const ExploreScreen(),
     _ => const ProfileScreen(),
   };
 

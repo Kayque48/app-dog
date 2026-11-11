@@ -27,6 +27,30 @@ pub struct DogInput {
     #[serde(default)]
     dislikes: String,
     photo_url: Option<String>,
+    weight_kg: Option<f64>,
+    #[serde(default)]
+    color: String,
+    #[serde(default)]
+    bio: String,
+    #[serde(default = "default_activity")]
+    activity_level: String,
+    #[serde(default = "default_looking_for")]
+    looking_for: String,
+    #[serde(default)]
+    microchip: String,
+    #[serde(default)]
+    neutered: bool,
+    #[serde(default)]
+    allergies: String,
+    #[serde(default)]
+    health_notes: String,
+}
+
+fn default_activity() -> String {
+    "medio".into()
+}
+fn default_looking_for() -> String {
+    "amizade".into()
 }
 
 struct ValidDog {
@@ -48,6 +72,18 @@ fn validate(input: &DogInput) -> AppResult<ValidDog> {
     }
     if !["calmo", "brincalhao", "timido", "agressivo"].contains(&input.temperament.as_str()) {
         return Err(AppError::bad("Temperamento inválido"));
+    }
+    if !["baixo", "medio", "alto"].contains(&input.activity_level.as_str()) {
+        return Err(AppError::bad("Nível de atividade deve ser baixo, medio ou alto"));
+    }
+    if !["amizade", "cruzamento", "ambos"].contains(&input.looking_for.as_str()) {
+        return Err(AppError::bad("Objetivo deve ser amizade, cruzamento ou ambos"));
+    }
+    if input.looking_for != "amizade" && input.neutered {
+        return Err(AppError::bad("Cão castrado não pode procurar cruzamento"));
+    }
+    if input.weight_kg.is_some_and(|w| !(0.3..=120.0).contains(&w)) {
+        return Err(AppError::bad("Peso inválido"));
     }
     if input.in_heat && input.sex != "femea" {
         return Err(AppError::bad("Só fêmeas entram no cio"));
@@ -82,8 +118,9 @@ pub async fn create(
 ) -> AppResult<Json<DogView>> {
     let v = validate(&input)?;
     let id = sqlx::query(
-        "INSERT INTO dogs (owner_id, name, breed, birth_date, sex, in_heat, temperament, bites, likes, dislikes, photo_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO dogs (owner_id, name, breed, birth_date, sex, in_heat, temperament, bites, likes, dislikes, photo_url,
+                           weight_kg, color, bio, activity_level, looking_for, microchip, neutered, allergies, health_notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(user.id)
     .bind(&v.name)
@@ -96,6 +133,15 @@ pub async fn create(
     .bind(input.likes.trim())
     .bind(input.dislikes.trim())
     .bind(&input.photo_url)
+    .bind(input.weight_kg)
+    .bind(input.color.trim())
+    .bind(input.bio.trim())
+    .bind(&input.activity_level)
+    .bind(&input.looking_for)
+    .bind(input.microchip.trim())
+    .bind(input.neutered)
+    .bind(input.allergies.trim())
+    .bind(input.health_notes.trim())
     .execute(&state.db)
     .await?
     .last_insert_rowid();
@@ -115,7 +161,8 @@ pub async fn update(
     let v = validate(&input)?;
     sqlx::query(
         "UPDATE dogs SET name = ?, breed = ?, birth_date = ?, sex = ?, in_heat = ?, temperament = ?,
-         bites = ?, likes = ?, dislikes = ?, photo_url = ? WHERE id = ?",
+         bites = ?, likes = ?, dislikes = ?, photo_url = ?, weight_kg = ?, color = ?, bio = ?, activity_level = ?,
+         looking_for = ?, microchip = ?, neutered = ?, allergies = ?, health_notes = ? WHERE id = ?",
     )
     .bind(&v.name)
     .bind(&v.breed)
@@ -127,6 +174,15 @@ pub async fn update(
     .bind(input.likes.trim())
     .bind(input.dislikes.trim())
     .bind(&input.photo_url)
+    .bind(input.weight_kg)
+    .bind(input.color.trim())
+    .bind(input.bio.trim())
+    .bind(&input.activity_level)
+    .bind(&input.looking_for)
+    .bind(input.microchip.trim())
+    .bind(input.neutered)
+    .bind(input.allergies.trim())
+    .bind(input.health_notes.trim())
     .bind(id)
     .execute(&state.db)
     .await?;
@@ -246,5 +302,80 @@ pub async fn delete_vaccine(State(state): State<AppState>, user: AuthUser, Path(
     let (dog_id,) = row.ok_or_else(|| AppError::not_found("Vacina não encontrada"))?;
     find_own_dog(&state.db, dog_id, user.id).await?;
     sqlx::query("DELETE FROM vaccines WHERE id = ?").bind(id).execute(&state.db).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+// ---------- carteira digital: documentos ----------
+
+#[derive(FromRow, Serialize)]
+pub struct DocumentRow {
+    id: i64,
+    kind: String,
+    title: String,
+    file_url: String,
+    status: String,
+    created_at: String,
+}
+
+/// Documentos só aparecem para o dono (são dados de saúde); para os outros, só o selo de pedigree.
+pub async fn list_documents(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path(id): Path<i64>,
+) -> AppResult<Json<Vec<DocumentRow>>> {
+    let dog = find_dog(&state.db, id).await?;
+    if dog.owner_id != user.id && !user.is_admin {
+        return Ok(Json(vec![]));
+    }
+    let rows = sqlx::query_as(
+        "SELECT id, kind, title, file_url, status, created_at FROM dog_documents WHERE dog_id = ? ORDER BY id DESC",
+    )
+    .bind(id)
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(rows))
+}
+
+#[derive(Deserialize)]
+pub struct DocumentInput {
+    kind: String,
+    title: String,
+    file_url: String,
+}
+
+pub async fn add_document(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path(id): Path<i64>,
+    Json(input): Json<DocumentInput>,
+) -> AppResult<Json<Value>> {
+    find_own_dog(&state.db, id, user.id).await?;
+    if !["pedigree", "exame", "rg", "receita", "outro"].contains(&input.kind.as_str()) {
+        return Err(AppError::bad("Tipo de documento inválido"));
+    }
+    if !input.file_url.starts_with("/uploads/") {
+        return Err(AppError::bad("Envie o arquivo antes"));
+    }
+    sqlx::query("INSERT INTO dog_documents (dog_id, kind, title, file_url) VALUES (?, ?, ?, ?)")
+        .bind(id)
+        .bind(&input.kind)
+        .bind(required(&input.title, "título")?)
+        .bind(&input.file_url)
+        .execute(&state.db)
+        .await?;
+    if input.kind == "pedigree" {
+        add_event(&state.db, id, "pedigree", "Pedigree enviado para verificação").await?;
+    }
+    Ok(Json(json!({ "ok": true })))
+}
+
+pub async fn delete_document(State(state): State<AppState>, user: AuthUser, Path(id): Path<i64>) -> AppResult<Json<Value>> {
+    let row: Option<(i64,)> = sqlx::query_as("SELECT dog_id FROM dog_documents WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
+    let (dog_id,) = row.ok_or_else(|| AppError::not_found("Documento não encontrado"))?;
+    find_own_dog(&state.db, dog_id, user.id).await?;
+    sqlx::query("DELETE FROM dog_documents WHERE id = ?").bind(id).execute(&state.db).await?;
     Ok(Json(json!({ "ok": true })))
 }

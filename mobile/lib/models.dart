@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// Textos exibidos para os valores usados pela API.
 const temperaments = {
   'calmo': 'Calmo / mansinho',
@@ -58,6 +60,16 @@ class Dog {
       removed = j['removed_at'] != null,
       ageYears = j['age_years'],
       vaccineStatus = VaccineStatus.fromJson(j['vaccine_status']),
+      weightKg = (j['weight_kg'] as num?)?.toDouble(),
+      color = j['color'] ?? '',
+      bio = j['bio'] ?? '',
+      activityLevel = j['activity_level'] ?? 'medio',
+      lookingFor = j['looking_for'] ?? 'amizade',
+      microchip = j['microchip'] ?? '',
+      neutered = j['neutered'] ?? false,
+      allergies = j['allergies'] ?? '',
+      healthNotes = j['health_notes'] ?? '',
+      pedigreeVerified = j['pedigree_verified'] ?? false,
       distanceM = j['distance_m'],
       ownerFirstName = j['owner_first_name'],
       wantsToMeetYou = j['wants_to_meet_you'] ?? false;
@@ -77,6 +89,16 @@ class Dog {
   final bool removed;
   final int ageYears;
   final VaccineStatus vaccineStatus;
+  final double? weightKg;
+  final String color;
+  final String bio;
+  final String activityLevel;
+  final String lookingFor;
+  final String microchip;
+  final bool neutered;
+  final String allergies;
+  final String healthNotes;
+  final bool pedigreeVerified;
 
   // Só preenchidos no Descobrir.
   final int? distanceM;
@@ -96,6 +118,15 @@ class Dog {
     'likes': likes,
     'dislikes': dislikes,
     'photo_url': photoUrl,
+    'weight_kg': weightKg,
+    'color': color,
+    'bio': bio,
+    'activity_level': activityLevel,
+    'looking_for': lookingFor,
+    'microchip': microchip,
+    'neutered': neutered,
+    'allergies': allergies,
+    'health_notes': healthNotes,
   };
 }
 
@@ -114,3 +145,70 @@ String formatDate(String? iso) {
 
 String isoDate(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+// ---------- eventos ----------
+
+const eventKinds = {
+  'desfile': ('Desfile', Icons.checkroom),
+  'corrida': ('Corrida', Icons.directions_run),
+  'festa': ('Festa', Icons.celebration),
+  'encontro': ('Encontro', Icons.groups),
+  'concurso': ('Concurso', Icons.emoji_events),
+  'adocao': ('Adoção', Icons.volunteer_activism),
+  'competicao': ('Competição', Icons.fitness_center),
+};
+
+const _week = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+const _month = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+/// Data de um evento ("2026-11-14 15:00") em pedaços para os cartões.
+class EventDate {
+  EventDate(String startsAt) : _d = DateTime.parse(startsAt.replaceFirst(' ', 'T'));
+  final DateTime _d;
+
+  String get week => _week[_d.weekday - 1];
+  String get day => _d.day.toString().padLeft(2, '0');
+  String get month => _month[_d.month - 1];
+  String get time => '${_d.hour.toString().padLeft(2, '0')}:${_d.minute.toString().padLeft(2, '0')}';
+
+  int get daysLeft {
+    final now = DateTime.now();
+    return DateTime(_d.year, _d.month, _d.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+  }
+
+  String get countdown => daysLeft <= 0 ? 'hoje!' : (daysLeft == 1 ? 'amanhã' : 'em $daysLeft dias');
+  bool get soon => daysLeft <= 2;
+}
+
+// ---------- perfil, carteira, serviços e loja ----------
+
+const activityLevels = {'baixo': 'Sossegado', 'medio': 'Moderado', 'alto': 'Elétrico'};
+const lookingForLabels = {'amizade': 'Amizade', 'cruzamento': 'Cruzamento', 'ambos': 'Amizade e cruzamento'};
+const docKinds = {'pedigree': 'Pedigree', 'exame': 'Exame', 'rg': 'RG animal', 'receita': 'Receita', 'outro': 'Outro'};
+
+const providerKinds = {
+  'veterinario': ('Veterinários', Icons.medical_services),
+  'banho_tosa': ('Banho e tosa', Icons.shower),
+  'pet_shop': ('Pet shops', Icons.storefront),
+  'adestrador': ('Adestradores', Icons.school),
+  'passeador': ('Passeadores', Icons.directions_walk),
+  'hotel': ('Hotéis e creches', Icons.hotel),
+  'criador': ('Criadores', Icons.workspace_premium),
+  'adocao': ('Adoção', Icons.volunteer_activism),
+};
+
+const productCategories = {
+  'roupas': ('Roupas', Icons.checkroom),
+  'alimentos': ('Alimentos', Icons.restaurant),
+  'brinquedos': ('Brinquedos', Icons.sports_baseball),
+  'acessorios': ('Acessórios', Icons.pets),
+  'higiene': ('Higiene', Icons.soap),
+};
+
+/// 8990 -> "R$ 89,90"
+String formatPrice(int cents) {
+  final reais = cents ~/ 100;
+  final centavos = (cents % 100).toString().padLeft(2, '0');
+  final milhar = reais.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
+  return 'R\$ $milhar,$centavos';
+}

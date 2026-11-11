@@ -1,7 +1,7 @@
 <script>
   // Descobrir: estilo Tinder. Arraste o cartão (ou use as setas do teclado) para passar ou pedir um encontro.
   import { onMount } from 'svelte';
-  import { ageText, api, formatDistance, imageUrl, sexes, temperaments } from '../lib/api.js';
+  import { activityLevels, ageText, api, formatDistance, imageUrl, lookingFor, playBark, sexes, temperaments } from '../lib/api.js';
   import { go, showError, toast } from '../lib/state.svelte.js';
   import DogAvatar from '../lib/DogAvatar.svelte';
   import Icon from '../lib/Icon.svelte';
@@ -9,6 +9,7 @@
   let myDogs = $state([]);
   let dogId = $state(null);
   let radius = $state(500);
+  let goal = $state('amizade'); // amizade | cruzamento
   let cards = $state([]);
   let blocked = $state(null);
   let loading = $state(true);
@@ -38,7 +39,7 @@
     blocked = null;
     if (!dogId) return (loading = false);
     try {
-      cards = await api('GET', `/discover?dog_id=${dogId}&radius_m=${radius}`);
+      cards = await api('GET', `/discover?dog_id=${dogId}&radius_m=${radius}&goal=${goal}`);
     } catch (e) {
       if (e.status === 400 || e.status === 403) { blocked = e.message; cards = []; } else showError(e);
     } finally { loading = false; }
@@ -51,7 +52,10 @@
     setTimeout(() => { cards = cards.slice(1); dragX = 0; seen++; }, 220);
     try {
       const r = await api('POST', '/swipes', { from_dog_id: dogId, to_dog_id: other.id, liked });
-      if (r.matched) match = other;
+      if (r.matched) {
+        match = other;
+        playBark(); // "au au!"
+      }
       else if (liked) toast(`Pedido enviado! Aguarde o dono de ${other.name} aceitar.`);
     } catch (e) { showError(e); }
   }
@@ -85,6 +89,11 @@
       </select>
     </label>
   {/if}
+  <div class="segmented goal" role="group" aria-label="Objetivo">
+    {#each [['amizade', 'diversity_1', 'Amizade'], ['cruzamento', 'favorite', 'Cruzamento']] as [k, icon, v]}
+      <button class:selected={goal === k} onclick={() => { goal = k; load(); }}><Icon name={icon} filled={goal === k} /> {v}</button>
+    {/each}
+  </div>
   <div class="segmented" role="group" aria-label="Distância">
     {#each [500, 1000, 3000] as r}
       <button class:selected={radius === r} onclick={() => { radius = r; load(); }}>
@@ -153,7 +162,12 @@
         {/if}
         {#if d.in_heat}<span class="chip"><Icon name="info" /> No cio</span>{/if}
         <span class="chip success"><Icon name="vaccines" /> Vacinas em dia</span>
+        <span class="chip"><Icon name="bolt" /> {activityLevels[d.activity_level]}</span>
+        <span class="chip tonal"><Icon name={d.looking_for === 'amizade' ? 'diversity_1' : 'favorite'} /> {lookingFor[d.looking_for]}</span>
+        {#if d.pedigree_verified}<span class="chip ped"><Icon name="verified" filled /> Pedigree</span>{/if}
+        {#if d.weight_kg}<span class="chip"><Icon name="scale" /> {d.weight_kg} kg</span>{/if}
       </div>
+      {#if d.bio}<p class="bio">“{d.bio}”</p>{/if}
       <div class="likes">
         {#if d.likes}<div class="like-box"><small>AMA</small><span>{d.likes}</span></div>{/if}
         {#if d.dislikes}<div class="like-box no"><small>ODEIA</small><span>{d.dislikes}</span></div>{/if}
@@ -174,6 +188,7 @@
       <span class="confetti" style="left:{c.left}%; background:{c.color}; animation-delay:{c.delay}s; rotate:{c.rot}deg"></span>
     {/each}
     <p class="display match-title">Deu match!</p>
+    <p class="bark display">AU AU! 🐶</p>
     <div class="pair">
       <span class="shape-cookie9 pair-a"><DogAvatar photo={myDog?.photo_url} size={160} /></span>
       <span class="heart"><Icon name="favorite" filled size={56} /></span>
@@ -189,6 +204,11 @@
 
 <style>
   .page-header .chip { margin: 0; }
+  .goal { margin-right: 8px; }
+  .bio { font-style: italic; margin: 8px 0; }
+  .ped { background: var(--like); color: #231b00; border: none; }
+  .ped :global(.icon) { color: inherit; }
+  .bark { font-size: 36px; margin: -8px 0 0; color: #fff; animation: pop 0.5s 0.3s both; }
   .filters { align-items: flex-end; }
   .filters label { margin-bottom: 16px; }
   .blocked { max-width: 520px; margin: 0 auto 16px; }

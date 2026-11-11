@@ -7,6 +7,10 @@ void main() {
     expect(isoDate(DateTime(2026, 3, 5)), '2026-03-05');
     expect(formatDistance(450), '450 m');
     expect(formatDistance(1500), '1.5 km');
+    expect(formatPrice(8990), 'R\$ 89,90');
+    expect(formatPrice(123456), 'R\$ 1.234,56');
+    expect(formatPrice(8990), 'R\$ 89,90');
+    expect(formatPrice(123456), 'R\$ 1.234,56');
   });
 
   test('lê o cão vindo da API', () {

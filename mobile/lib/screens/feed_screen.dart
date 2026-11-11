@@ -3,19 +3,22 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 import '../api.dart';
 import '../main.dart' show display, likeYellow;
 import '../models.dart';
 import '../widgets.dart';
 import 'dog_detail_screen.dart';
+import 'event_detail_screen.dart';
+import 'events_screen.dart' show DateBadge;
 
 /// Feed "cheio de vida": stories, post de destaque, blocos misturados
 /// (cães perto, parque do dia, pedidos), curtida animada e aviso de fotos novas.
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key, this.onOpenTab});
 
-  /// Abre outra aba da tela principal (1 = Descobrir, 2 = Encontros, 3 = Parques).
+  /// Abre outra aba da tela principal (1 = Descobrir, 2 = Encontros, 3 = Explorar).
   final ValueChanged<int>? onOpenTab;
 
   @override
@@ -32,6 +35,7 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Dog> _myDogs = [];
   List<Dog> _nearby = [];
   Map<String, dynamic>? _park;
+  List<Map<String, dynamic>> _events = [];
   int _requests = 0;
   int _fresh = 0;
   Timer? _timer;
@@ -95,6 +99,8 @@ class _FeedScreenState extends State<FeedScreen> {
         final near = await Api.instance.get('/discover?dog_id=${_myDogs.first.id}&radius_m=1000') as List;
         _nearby = near.map((j) => Dog.fromJson(j)).take(8).toList();
       }
+      _events = List<Map<String, dynamic>>.from(await Api.instance.get('/events')).take(4).toList();
+      if (mounted) setState(() {});
       final places = await Api.instance.get('/places?limit=1') as List;
       _park = places.isEmpty ? null : places.first;
     } catch (_) {}
@@ -141,6 +147,9 @@ class _FeedScreenState extends State<FeedScreen> {
         items.add(
           _ParkModule(park: _park!, dogName: _myDogs.firstOrNull?.name, onOpen: () => widget.onOpenTab?.call(3)),
         );
+      }
+      if (i == 3 && _events.isNotEmpty) {
+        items.add(_EventsModule(events: _events, onOpenAll: () => widget.onOpenTab?.call(3)));
       }
       if (i == 4) items.add(const AdBanner());
       if (i == 5 && _requests > 0) {
@@ -412,7 +421,10 @@ class _PostCardState extends State<_PostCard> with TickerProviderStateMixin {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    DogPhoto(photoUrl: p['image_url'], height: double.infinity),
+                    if (p['media_type'] == 'video')
+                      FeedVideo(url: Api.imageUrl(p['image_url'])!)
+                    else
+                      DogPhoto(photoUrl: p['image_url'], height: double.infinity),
                     if (widget.hero)
                       DecoratedBox(
                         decoration: BoxDecoration(
@@ -495,6 +507,21 @@ class _PostCardState extends State<_PostCard> with TickerProviderStateMixin {
                   ),
                 ),
               ),
+              FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  backgroundColor: scheme.surfaceContainerHigh,
+                ),
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  showDragHandle: true,
+                  builder: (_) => CommentsSheet(postId: p['id'], onCount: (n) => setState(() => p['comments'] = n)),
+                ),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: Text('${p['comments'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 6),
               // botão de curtir em pílula, que "pula" ao tocar
               FilledButton.tonalIcon(
                 style: FilledButton.styleFrom(
@@ -518,6 +545,204 @@ class _PostCardState extends State<_PostCard> with TickerProviderStateMixin {
           if (!widget.hero && (p['caption'] as String).isNotEmpty)
             Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text(p['caption'])),
         ],
+      ),
+    );
+  }
+}
+
+/// Vídeo do feed: toca sozinho, sem som e em loop (toque para ligar o som).
+class FeedVideo extends StatefulWidget {
+  const FeedVideo({super.key, required this.url});
+  final String url;
+
+  @override
+  State<FeedVideo> createState() => _FeedVideoState();
+}
+
+class _FeedVideoState extends State<FeedVideo> {
+  late final _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+  bool _muted = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller
+        .initialize()
+        .then((_) {
+          _controller
+            ..setLooping(true)
+            ..setVolume(0)
+            ..play();
+          if (mounted) setState(() {});
+        })
+        .catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (!_controller.value.isInitialized) {
+      return ColoredBox(
+        color: scheme.primaryContainer,
+        child: Icon(Icons.play_circle, size: 72, color: scheme.onPrimaryContainer),
+      );
+    }
+    return GestureDetector(
+      onTap: () => setState(() {
+        _muted = !_muted;
+        _controller.setVolume(_muted ? 0 : 1);
+      }),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _controller.value.size.width,
+              height: _controller.value.size.height,
+              child: VideoPlayer(_controller),
+            ),
+          ),
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: CircleAvatar(
+              backgroundColor: Colors.black54,
+              child: Icon(_muted ? Icons.volume_off : Icons.volume_up, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Comentários de uma publicação (folha que sobe de baixo).
+class CommentsSheet extends StatefulWidget {
+  const CommentsSheet({super.key, required this.postId, required this.onCount});
+  final int postId;
+  final ValueChanged<int> onCount;
+
+  @override
+  State<CommentsSheet> createState() => _CommentsSheetState();
+}
+
+class _CommentsSheetState extends State<CommentsSheet> {
+  List<Map<String, dynamic>>? _items;
+  final _text = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = List<Map<String, dynamic>>.from(await Api.instance.get('/posts/${widget.postId}/comments'));
+      if (!mounted) return;
+      setState(() => _items = data);
+      widget.onCount(data.length);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
+  Future<void> _send() async {
+    if (_text.text.trim().isEmpty) return;
+    try {
+      await Api.instance.post('/posts/${widget.postId}/comments', {'text': _text.text});
+      _text.clear();
+      _load();
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final items = _items;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.6,
+        child: Column(
+          children: [
+            Text('Comentários', style: Theme.of(context).textTheme.titleLarge),
+            Expanded(
+              child: items == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : items.isEmpty
+                  ? const EmptyState(icon: Icons.chat_bubble_outline, text: 'Seja o primeiro a comentar!')
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        for (final c in items)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ShapedDog(photoUrl: c['author_photo'], shape: Shapes.cookie12, size: 36),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: scheme.surfaceContainerHigh,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(18),
+                                        topRight: Radius.circular(18),
+                                        bottomRight: Radius.circular(18),
+                                        bottomLeft: Radius.circular(4),
+                                      ),
+                                    ),
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: '${c['author']} ',
+                                            style: const TextStyle(fontWeight: FontWeight.w800),
+                                          ),
+                                          TextSpan(text: c['text']),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _text,
+                        maxLength: 500,
+                        onSubmitted: (_) => _send(),
+                        decoration: const InputDecoration(hintText: 'Escreva um comentário...', counterText: ''),
+                      ),
+                    ),
+                    IconButton.filled(onPressed: _send, icon: const Icon(Icons.send)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -655,6 +880,103 @@ class _ParkModule extends StatelessWidget {
   }
 }
 
+class _EventsModule extends StatelessWidget {
+  const _EventsModule({required this.events, required this.onOpenAll});
+  final List<Map<String, dynamic>> events;
+  final VoidCallback onOpenAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(20, 16, 8, 20),
+      decoration: BoxDecoration(color: scheme.tertiaryContainer, borderRadius: BorderRadius.circular(40)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Rolês que vêm aí 🎉',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: scheme.onTertiaryContainer),
+                ),
+              ),
+              TextButton(onPressed: onOpenAll, child: const Text('Ver todos')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 210,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: events.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, i) {
+                final e = events[i];
+                final d = EventDate(e['starts_at']);
+                return GestureDetector(
+                  onTap: () =>
+                      Navigator.of(context)
+                          .push(MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: e['id']))),
+                  child: SizedBox(
+                    width: 200,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(32),
+                            topRight: Radius.circular(32),
+                            bottomRight: Radius.circular(32),
+                            bottomLeft: Radius.circular(8),
+                          ),
+                          child: SizedBox(
+                            height: 130,
+                            width: 200,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ColoredBox(
+                                  color: scheme.primaryContainer,
+                                  child: Icon(eventKinds[e['kind']]!.$2, size: 48, color: scheme.onPrimaryContainer),
+                                ),
+                                if (e['cover_url'] != null)
+                                  Image.network(
+                                    Api.imageUrl(e['cover_url'])!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const SizedBox(),
+                                  ),
+                                Positioned(left: 8, top: 8, child: DateBadge(date: d, size: 56)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          e['title'],
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: display(const TextStyle(fontSize: 16))?.copyWith(color: scheme.onTertiaryContainer),
+                        ),
+                        Text(
+                          '${d.countdown} · ${e['going']} vão${e['has_contest'] == true ? ' · 🏆' : ''}',
+                          style: TextStyle(fontSize: 12, color: scheme.onTertiaryContainer),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RequestsModule extends StatelessWidget {
   const _RequestsModule({required this.count, required this.onOpen});
   final int count;
@@ -694,6 +1016,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   List<Dog> _dogs = [];
   int? _dogId;
   XFile? _image;
+  bool _isVideo = false;
   final _caption = TextEditingController();
   bool _sending = false;
 
@@ -717,7 +1040,20 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   Future<void> _pick(ImageSource source) async {
     final img = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 85);
-    if (img != null) setState(() => _image = img);
+    if (img == null) return;
+    setState(() {
+      _image = img;
+      _isVideo = false;
+    });
+  }
+
+  Future<void> _pickVideo() async {
+    final video = await ImagePicker().pickVideo(source: ImageSource.gallery, maxDuration: const Duration(seconds: 60));
+    if (video == null) return;
+    setState(() {
+      _image = video;
+      _isVideo = true;
+    });
   }
 
   Future<void> _send() async {
@@ -751,7 +1087,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
                     onChanged: (v) => setState(() => _dogId = v),
                   ),
                   const SizedBox(height: 12),
-                  if (_image != null) Image.file(File(_image!.path), height: 240, fit: BoxFit.cover),
+                  if (_image != null && !_isVideo) Image.file(File(_image!.path), height: 240, fit: BoxFit.cover),
+                  if (_image != null && _isVideo)
+                    ListTile(leading: const Icon(Icons.movie, size: 36), title: Text('Vídeo: ${_image!.name}')),
                   Row(
                     children: [
                       Expanded(
@@ -767,6 +1105,14 @@ class _NewPostScreenState extends State<NewPostScreen> {
                           onPressed: () => _pick(ImageSource.gallery),
                           icon: const Icon(Icons.photo),
                           label: const Text('Galeria'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _pickVideo,
+                          icon: const Icon(Icons.videocam),
+                          label: const Text('Vídeo'),
                         ),
                       ),
                     ],
