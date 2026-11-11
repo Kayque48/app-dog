@@ -63,6 +63,7 @@ class DogAvatar extends StatelessWidget {
       radius: radius,
       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       backgroundImage: url == null ? null : NetworkImage(url),
+      onBackgroundImageError: url == null ? null : (_, _) {},
       child: url == null ? Icon(Icons.pets, size: radius) : null,
     );
   }
@@ -83,7 +84,12 @@ class DogPhoto extends StatelessWidget {
       color: Theme.of(context).colorScheme.primaryContainer,
       child: url == null
           ? Icon(Icons.pets, size: height / 3, color: Theme.of(context).colorScheme.onPrimaryContainer)
-          : Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.broken_image)),
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  Icon(Icons.pets, size: height / 3, color: Theme.of(context).colorScheme.onPrimaryContainer),
+            ),
     );
   }
 }

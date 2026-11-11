@@ -82,7 +82,11 @@
         <DogAvatar photo={p.dog_photo_url} />
         <span class="names"><span class="name">{p.dog_name}</span><small class="muted">{p.dog_breed}</small></span>
       </button>
-      <img src={imageUrl(p.image_url)} alt={p.caption} ondblclick={() => !p.liked_by_me && like(p)} />
+      <!-- a pata fica atrás da foto e aparece se ela não carregar -->
+      <div class="media" ondblclick={() => !p.liked_by_me && like(p)} role="presentation">
+        <Icon name="pets" filled size={96} />
+        <img src={imageUrl(p.image_url)} alt="" />
+      </div>
       <div class="row">
         <button class="icon-btn" class:liked={p.liked_by_me} onclick={() => like(p)} aria-label="Curtir">
           <Icon name="favorite" filled={p.liked_by_me} />
@@ -106,7 +110,15 @@
   .author { height: 72px; width: 100%; justify-content: flex-start; gap: 16px; padding: 0 16px; border-radius: 0; color: var(--md-on-surface); }
   .names { display: flex; flex-direction: column; align-items: flex-start; }
   .name { font-size: 16px; }
-  img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--md-surface-container-high); }
+  .media {
+    position: relative;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+  }
+  .media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   article .row { padding: 4px 8px 0; gap: 4px; }
   .liked { color: var(--md-error); }
   .caption { padding: 0 16px 16px; }

@@ -57,7 +57,7 @@
   </div>
 
   <div class="card top">
-    <div class="photo">{#if d.photo_url}<img src={imageUrl(d.photo_url)} alt="" />{:else}<Icon name="pets" filled size={96} />{/if}</div>
+    <div class="photo"><Icon name="pets" filled size={96} />{#if d.photo_url}<img src={imageUrl(d.photo_url)} alt="" />{/if}</div>
     <div class="grow info">
       <h2>{d.name}, {ageText(d.age_years)}</h2>
       <p class="muted">{d.breed} · {sexes[d.sex]}{d.in_heat ? ' · no cio' : ''}</p>
@@ -144,6 +144,7 @@
 <style>
   .top { display: flex; gap: 24px; align-items: flex-start; padding: 16px; }
   .photo {
+    position: relative;
     width: 240px;
     height: 240px;
     border-radius: 16px;
@@ -154,7 +155,7 @@
     overflow: hidden;
     flex-shrink: 0;
   }
-  .photo img { width: 100%; height: 100%; object-fit: cover; }
+  .photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .info h2 { margin-top: 0; }
   .owner { margin: 4px 0 16px; }
   strong { font-weight: 500; }

@@ -115,7 +115,8 @@
       {#if dragX > 40}<div class="stamp yes"><Icon name="favorite" filled /> Quero conhecer</div>{/if}
       {#if dragX < -40}<div class="stamp no"><Icon name="close" /> Passar</div>{/if}
       <div class="photo">
-        {#if d.photo_url}<img src={imageUrl(d.photo_url)} alt="" draggable="false" />{:else}<Icon name="pets" filled size={96} />{/if}
+        <Icon name="pets" filled size={96} />
+        {#if d.photo_url}<img src={imageUrl(d.photo_url)} alt="" draggable="false" />{/if}
       </div>
       <div class="body">
         {#if d.wants_to_meet_you}<span class="chip tonal"><Icon name="favorite" filled /> Quer conhecer o seu cão!</span>{/if}
@@ -147,11 +148,11 @@
 <style>
   .filters { align-items: flex-end; }
   .filters label { margin-bottom: 16px; }
-  .blocked { display: inline-block; max-width: 520px; margin-bottom: 16px; }
+  .blocked { max-width: 520px; margin: 0 auto 16px; }
   .stage { max-width: 440px; margin: 8px auto; text-align: center; }
   .swipe { position: relative; text-align: left; user-select: none; cursor: grab; touch-action: none; padding: 0; overflow: hidden; border-radius: 28px; box-shadow: var(--md-elevation-2); }
-  .photo { height: 300px; background: var(--md-primary-container); color: var(--md-on-primary-container); display: grid; place-items: center; overflow: hidden; }
-  .photo img { width: 100%; height: 100%; object-fit: cover; }
+  .photo { position: relative; height: 300px; background: var(--md-primary-container); color: var(--md-on-primary-container); display: grid; place-items: center; overflow: hidden; }
+  .photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .body { padding: 16px 20px 8px; }
   .body h2 { margin: 4px 0; }
   .chips { margin: 12px 0 4px; }
