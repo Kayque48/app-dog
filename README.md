@@ -4,6 +4,8 @@ Rede social para cachorros, feita a partir da entrevista com o cliente. Os donos
 
 > Projeto de ensino. Não vai a público.
 
+📚 **Documentação completa:** na [wiki do repositório](https://github.com/Kayque48/app-dog/wiki) e em `docs/wiki/`, um vault do Obsidian (abra a pasta como cofre).
+
 ## Estrutura
 
 | Pasta      | O que é                     | Tecnologia                                   |
