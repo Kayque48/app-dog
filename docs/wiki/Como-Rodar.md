@@ -48,3 +48,11 @@ npm run tauri dev
 - Outra API: crie `desktop/.env` com `VITE_API_URL=http://endereco:3000`.
 
 Veja também [[App-Mobile]] e [[App-Desktop]].
+
+## Atualizar a wiki do GitHub
+A wiki é gerada a partir desta pasta (`docs/wiki`). Depois de editar no Obsidian:
+```bash
+bash docs/publicar-wiki.sh
+```
+> [!IMPORTANT]
+> Na primeira vez, crie uma página qualquer na aba **Wiki** do GitHub ("Create the first page"). Só depois disso o GitHub cria o repositório da wiki.
