@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../main.dart' show likeYellow;
 import '../models.dart';
+import 'dog_wallet.dart';
 import '../widgets.dart';
 import 'dog_form_screen.dart';
 import 'owner_screen.dart';
@@ -61,24 +63,27 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
 
           return AlertDialog(
             title: const Text('Registrar vacina'),
-            content: Column(mainAxisSize: MainAxisSize.min, children: [
-              DropdownButtonFormField<String>(
-                initialValue: name,
-                decoration: const InputDecoration(labelText: 'Vacina'),
-                items: [for (final v in vaccineNames) DropdownMenuItem(value: v, child: Text(v))],
-                onChanged: (v) => setLocal(() => name = v!),
-              ),
-              ListTile(
-                title: const Text('Aplicada em'),
-                subtitle: Text(formatDate(isoDate(applied))),
-                onTap: () => pick(false),
-              ),
-              ListTile(
-                title: const Text('Próximo reforço'),
-                subtitle: Text(nextDue == null ? 'Sem reforço' : formatDate(isoDate(nextDue!))),
-                onTap: () => pick(true),
-              ),
-            ]),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: name,
+                  decoration: const InputDecoration(labelText: 'Vacina'),
+                  items: [for (final v in vaccineNames) DropdownMenuItem(value: v, child: Text(v))],
+                  onChanged: (v) => setLocal(() => name = v!),
+                ),
+                ListTile(
+                  title: const Text('Aplicada em'),
+                  subtitle: Text(formatDate(isoDate(applied))),
+                  onTap: () => pick(false),
+                ),
+                ListTile(
+                  title: const Text('Próximo reforço'),
+                  subtitle: Text(nextDue == null ? 'Sem reforço' : formatDate(isoDate(nextDue!))),
+                  onTap: () => pick(true),
+                ),
+              ],
+            ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
               FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salvar')),
@@ -109,17 +114,26 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
         builder: (ctx, setLocal) => AlertDialog(
           title: const Text('Denunciar'),
           content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              RadioGroup<String>(
-                groupValue: reason,
-                onChanged: (v) => setLocal(() => reason = v!),
-                child: Column(children: [
-                  for (final e in reportReasons.entries)
-                    RadioListTile<String>(value: e.key, title: Text(e.value), dense: true),
-                ]),
-              ),
-              TextField(controller: details, maxLines: 3, decoration: const InputDecoration(labelText: 'O que aconteceu?')),
-            ]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RadioGroup<String>(
+                  groupValue: reason,
+                  onChanged: (v) => setLocal(() => reason = v!),
+                  child: Column(
+                    children: [
+                      for (final e in reportReasons.entries)
+                        RadioListTile<String>(value: e.key, title: Text(e.value), dense: true),
+                    ],
+                  ),
+                ),
+                TextField(
+                  controller: details,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'O que aconteceu?'),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
@@ -130,7 +144,11 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
     );
     if (ok != true) return;
     try {
-      final r = await Api.instance.post('/reports', {'target_dog_id': widget.dogId, 'reason': reason, 'details': details.text});
+      final r = await Api.instance.post('/reports', {
+        'target_dog_id': widget.dogId,
+        'reason': reason,
+        'details': details.text,
+      });
       if (mounted) showMessage(context, r['message']);
     } catch (e) {
       if (mounted) showError(context, e);
@@ -145,7 +163,12 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final data = _data;
-    if (data == null) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+    if (data == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     final dog = Dog.fromJson(data['dog']);
     final history = List<Map<String, dynamic>>.from(data['history']);
     final t = Theme.of(context).textTheme;
@@ -160,63 +183,121 @@ class _DogDetailScreenState extends State<DogDetailScreen> {
         ],
       ),
       body: Constrained(
-        child: ListView(children: [
-          DogPhoto(photoUrl: dog.photoUrl),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${dog.name}, ${dog.ageText}', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-              Text('${dog.breed} • ${sexes[dog.sex]}${dog.inHeat ? ' • no cio' : ''}'),
-              TextButton.icon(
-                icon: const Icon(Icons.person),
-                label: Text('Dono(a): ${data['owner']['first_name']}'),
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => OwnerScreen(userId: data['owner']['id']))),
+        child: ListView(
+          children: [
+            DogPhoto(photoUrl: dog.photoUrl),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${dog.name}, ${dog.ageText}', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  Text('${dog.breed} • ${sexes[dog.sex]}${dog.inHeat ? ' • no cio' : ''}'),
+                  TextButton.icon(
+                    icon: const Icon(Icons.person),
+                    label: Text('Dono(a): ${data['owner']['first_name']}'),
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .push(MaterialPageRoute(builder: (_) => OwnerScreen(userId: data['owner']['id']))),
+                  ),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      Chip(label: Text(temperaments[dog.temperament] ?? dog.temperament)),
+                      Chip(label: Text(dog.bites ? 'Pode morder' : 'Não morde')),
+                    ],
+                  ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.bolt, size: 18),
+                        label: Text(activityLevels[dog.activityLevel] ?? ''),
+                      ),
+                      Chip(
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        avatar: Icon(dog.lookingFor == 'amizade' ? Icons.diversity_1 : Icons.favorite, size: 18),
+                        label: Text(lookingForLabels[dog.lookingFor] ?? ''),
+                      ),
+                      if (dog.pedigreeVerified)
+                        const Chip(
+                          backgroundColor: likeYellow,
+                          avatar: Icon(Icons.verified, size: 18, color: Color(0xFF231B00)),
+                          label: Text('Pedigree verificado', style: TextStyle(color: Color(0xFF231B00))),
+                        ),
+                      if (dog.weightKg != null)
+                        Chip(avatar: const Icon(Icons.scale, size: 18), label: Text('${dog.weightKg} kg')),
+                      if (dog.color.isNotEmpty)
+                        Chip(avatar: const Icon(Icons.palette, size: 18), label: Text(dog.color)),
+                    ],
+                  ),
+                  if (dog.bio.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text('“${dog.bio}”', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16)),
+                    ),
+                  if (dog.likes.isNotEmpty) Text('Gosta de: ${dog.likes}'),
+                  if (dog.dislikes.isNotEmpty) Text('Não gosta de: ${dog.dislikes}'),
+                  const Divider(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Carteira de vacinação',
+                          style: t.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      if (_isMine && !dog.removed)
+                        TextButton.icon(
+                          onPressed: _addVaccine,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Vacina'),
+                        ),
+                    ],
+                  ),
+                  Card.filled(
+                    color: status.upToDate ? successContainer(context) : Theme.of(context).colorScheme.errorContainer,
+                    child: ListTile(
+                      leading: Icon(
+                        status.upToDate ? Icons.verified : Icons.block,
+                        color: status.upToDate ? successColor(context) : Theme.of(context).colorScheme.error,
+                      ),
+                      title: Text(status.description),
+                      subtitle: status.upToDate
+                          ? null
+                          : const Text('Com vacina atrasada ou faltando, o cão fica bloqueado no Descobrir.'),
+                    ),
+                  ),
+                  for (final v in _vaccines)
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.vaccines),
+                      title: Text(v['name']),
+                      subtitle: Text(
+                        'Aplicada em ${formatDate(v['applied_on'])}'
+                        '${v['next_due'] != null ? ' • reforço em ${formatDate(v['next_due'])}' : ''}',
+                      ),
+                    ),
+                  const Divider(height: 32),
+                  DogWallet(dog: dog, isMine: _isMine && !dog.removed),
+                  const Divider(height: 32),
+                  Text('Histórico', style: t.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  for (final h in history)
+                    ListTile(
+                      dense: true,
+                      leading: Icon(
+                        h['kind'] == 'incidente' ? Icons.warning : Icons.history,
+                        color: h['kind'] == 'incidente' ? Theme.of(context).colorScheme.error : null,
+                      ),
+                      title: Text(h['description']),
+                      subtitle: Text(formatDate(h['created_at'])),
+                    ),
+                ],
               ),
-              Wrap(spacing: 6, children: [
-                Chip(label: Text(temperaments[dog.temperament] ?? dog.temperament)),
-                Chip(label: Text(dog.bites ? 'Pode morder' : 'Não morde')),
-              ]),
-              if (dog.likes.isNotEmpty) Text('Gosta de: ${dog.likes}'),
-              if (dog.dislikes.isNotEmpty) Text('Não gosta de: ${dog.dislikes}'),
-              const Divider(height: 32),
-              Row(children: [
-                Expanded(child: Text('Carteira de vacinação', style: t.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
-                if (_isMine && !dog.removed)
-                  TextButton.icon(onPressed: _addVaccine, icon: const Icon(Icons.add), label: const Text('Vacina')),
-              ]),
-              Card(
-                color: status.upToDate ? Colors.green.shade50 : Colors.red.shade50,
-                child: ListTile(
-                  leading: Icon(status.upToDate ? Icons.verified : Icons.block,
-                      color: status.upToDate ? Colors.green : Colors.red),
-                  title: Text(status.description),
-                  subtitle: status.upToDate
-                      ? null
-                      : const Text('Com vacina atrasada ou faltando, o cão fica bloqueado no Descobrir.'),
-                ),
-              ),
-              for (final v in _vaccines)
-                ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.vaccines),
-                  title: Text(v['name']),
-                  subtitle: Text('Aplicada em ${formatDate(v['applied_on'])}'
-                      '${v['next_due'] != null ? ' • reforço em ${formatDate(v['next_due'])}' : ''}'),
-                ),
-              const Divider(height: 32),
-              Text('Histórico', style: t.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-              for (final h in history)
-                ListTile(
-                  dense: true,
-                  leading: Icon(h['kind'] == 'incidente' ? Icons.warning : Icons.history,
-                      color: h['kind'] == 'incidente' ? Colors.red : null),
-                  title: Text(h['description']),
-                  subtitle: Text(formatDate(h['created_at'])),
-                ),
-            ]),
-          ),
-        ]),
+            ),
+          ],
+        ),
       ),
     );
   }

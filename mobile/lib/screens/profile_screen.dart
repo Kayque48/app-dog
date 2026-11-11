@@ -45,8 +45,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _removeDog(Dog dog) async {
-    final ok = await _confirm('Remover ${dog.name}?',
-        'O cão sai do seu perfil, mas continua no histórico (por segurança).');
+    final ok = await _confirm(
+      'Remover ${dog.name}?',
+      'O cão sai do seu perfil, mas continua no histórico (por segurança).',
+    );
     if (!ok) return;
     try {
       await Api.instance.delete('/dogs/${dog.id}');
@@ -72,8 +74,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _deleteAccount() async {
-    final ok = await _confirm('Excluir minha conta?',
-        'Seus dados pessoais serão apagados (LGPD). Essa ação não pode ser desfeita.');
+    final ok = await _confirm(
+      'Excluir minha conta?',
+      'Seus dados pessoais serão apagados (LGPD). Essa ação não pode ser desfeita.',
+    );
     if (!ok) return;
     try {
       await Api.instance.delete('/me');
@@ -103,9 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final current = _dogs.where((d) => !d.removed).toList();
     final past = _dogs.where((d) => d.removed).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil'), actions: [
-        IconButton(icon: const Icon(Icons.logout), tooltip: 'Sair', onPressed: _logout),
-      ]),
+      appBar: AppBar(
+        title: const Text('Perfil'),
+        actions: [IconButton(icon: const Icon(Icons.logout), tooltip: 'Sair', onPressed: _logout)],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openDogForm(),
         icon: const Icon(Icons.add),
@@ -116,65 +121,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: Constrained(
-                child: ListView(padding: const EdgeInsets.only(bottom: 96), children: [
-                  ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(me['name'], style: Theme.of(context).textTheme.titleLarge),
-                    subtitle: Text('${me['email']}\n${me['city']}'),
-                    isThreeLine: true,
-                  ),
-                  SwitchListTile(
-                    secondary: const Icon(Icons.workspace_premium),
-                    title: const Text('All Love Premium'),
-                    subtitle: const Text('Sem anúncios'),
-                    value: me['is_premium'] == true,
-                    onChanged: _setPremium,
-                  ),
-                  const Divider(),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Meus cães', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  ),
-                  if (current.isEmpty)
-                    const Padding(padding: EdgeInsets.all(16), child: Text('Você ainda não cadastrou nenhum cão.')),
-                  for (final d in current)
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 96),
+                  children: [
                     ListTile(
-                      leading: DogAvatar(photoUrl: d.photoUrl),
-                      title: Text('${d.name} • ${d.ageText}'),
-                      subtitle: Text(d.vaccineStatus.description,
-                          style: TextStyle(color: d.vaccineStatus.upToDate ? Colors.green : Colors.red)),
-                      onTap: () async {
-                        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: d.id)));
-                        _load();
-                      },
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (v) => v == 'edit' ? _openDogForm(d) : _removeDog(d),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Editar')),
-                          PopupMenuItem(value: 'remove', child: Text('Remover')),
-                        ],
-                      ),
+                      leading: const CircleAvatar(child: Icon(Icons.person)),
+                      title: Text(me['name'], style: Theme.of(context).textTheme.titleLarge),
+                      subtitle: Text('${me['email']}\n${me['city']}'),
+                      isThreeLine: true,
                     ),
-                  if (past.isNotEmpty) ...[
+                    SwitchListTile(
+                      secondary: const Icon(Icons.workspace_premium),
+                      title: const Text('All Love Premium'),
+                      subtitle: const Text('Sem anúncios'),
+                      value: me['is_premium'] == true,
+                      onChanged: _setPremium,
+                    ),
+                    const Divider(),
                     const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Text('Cães que já tive', style: TextStyle(fontWeight: FontWeight.bold)),
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('Meus cães', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     ),
-                    for (final d in past)
+                    if (current.isEmpty)
+                      const Padding(padding: EdgeInsets.all(16), child: Text('Você ainda não cadastrou nenhum cão.')),
+                    for (final d in current)
                       ListTile(
                         leading: DogAvatar(photoUrl: d.photoUrl),
-                        title: Text(d.name),
-                        subtitle: Text(d.breed),
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: d.id))),
+                        title: Text('${d.name} • ${d.ageText}'),
+                        subtitle: Text(
+                          d.vaccineStatus.description,
+                          style: TextStyle(
+                            color: d.vaccineStatus.upToDate
+                                ? successColor(context)
+                                : Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        onTap: () async {
+                          await Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: d.id)));
+                          _load();
+                        },
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (v) => v == 'edit' ? _openDogForm(d) : _removeDog(d),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Editar')),
+                            PopupMenuItem(value: 'remove', child: Text('Remover')),
+                          ],
+                        ),
                       ),
+                    if (past.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Text('Cães que já tive', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      for (final d in past)
+                        ListTile(
+                          leading: DogAvatar(photoUrl: d.photoUrl),
+                          title: Text(d.name),
+                          subtitle: Text(d.breed),
+                          onTap: () =>
+                              Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => DogDetailScreen(dogId: d.id))),
+                        ),
+                    ],
+                    const Divider(),
+                    ListTile(
+                      leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
+                      title: const Text('Excluir minha conta'),
+                      onTap: _deleteAccount,
+                    ),
                   ],
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.delete_forever, color: Colors.red),
-                    title: const Text('Excluir minha conta'),
-                    onTap: _deleteAccount,
-                  ),
-                ]),
+                ),
               ),
             ),
     );

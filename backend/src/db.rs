@@ -25,8 +25,7 @@ pub async fn connect(url: &str) -> SqlitePool {
 }
 
 /// Cria o administrador, os parques/pontos de encontro e os anúncios.
-/// Com `SEED_DEMO=1` (padrão) também cria donos e cães de exemplo perto do Ibirapuera,
-/// para o Descobrir ter alguém para mostrar durante as aulas.
+/// Com `SEED_DEMO=1` (padrão) também cria os dados de exemplo de `demo.rs`.
 pub async fn seed(pool: &SqlitePool) {
     let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@alllove.local".into());
     let admin_password = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin123".into());
@@ -37,7 +36,12 @@ pub async fn seed(pool: &SqlitePool) {
         .await
         .unwrap();
     if exists.is_some() {
-        return; // já foi semeado
+        // banco já semeado; bancos antigos ganham os eventos de exemplo quando eles ainda não existem
+        if demo_enabled() {
+            crate::demo::seed_events_if_missing(pool).await;
+            crate::demo::seed_extras_if_missing(pool).await;
+        }
+        return;
     }
 
     sqlx::query(
@@ -87,76 +91,14 @@ pub async fn seed(pool: &SqlitePool) {
             .unwrap();
     }
 
-    if std::env::var("SEED_DEMO").map(|v| v != "0").unwrap_or(true) {
-        seed_demo(pool).await;
+    if demo_enabled() {
+        crate::demo::seed(pool).await;
+        crate::demo::seed_events_if_missing(pool).await;
+        crate::demo::seed_extras_if_missing(pool).await;
     }
     tracing::info!("dados iniciais criados (admin: {admin_email})");
 }
 
-async fn seed_demo(pool: &SqlitePool) {
-    let today = chrono::Local::now().date_naive();
-    let next_year = (today + chrono::Days::new(300)).format("%Y-%m-%d").to_string();
-    let applied = (today - chrono::Days::new(60)).format("%Y-%m-%d").to_string();
-
-    // (dono, e-mail, cpf, lat, lng, cão, raça, nascimento, sexo, cio, temperamento, morde, gosta, não gosta)
-    let demo = [
-        ("Maria Souza", "maria@demo.local", "52998224725", -23.5868, -46.6570,
-         "Mel", "Shih Tzu", "2021-03-15", "femea", false, "calmo", false, "Dormir no sofá, petiscos", "Chinelo, barulho de moto"),
-        ("João Lima", "joao@demo.local", "16899535009", -23.5880, -46.6590,
-         "Thor", "Golden Retriever", "2019-08-02", "macho", false, "brincalhao", false, "Morder bolinha, nadar", "Ficar sozinho"),
-        ("Ana Costa", "ana@demo.local", "71428793860", -23.5859, -46.6555,
-         "Luna", "Vira-lata", "2022-11-20", "femea", true, "timido", false, "Passear de manhã", "Cachorros grandes"),
-    ];
-    for (owner, email, cpf, lat, lng, dog, breed, birth, sex, heat, temp, bites, likes, dislikes) in demo {
-        let user_id = sqlx::query(
-            "INSERT INTO users (name, email, password_hash, phone, cpf, cep, city, address, lat, lng)
-             VALUES (?, ?, ?, '11988887777', ?, '04094050', 'São Paulo', 'Vila Mariana', ?, ?)",
-        )
-        .bind(owner)
-        .bind(email)
-        .bind(hash_password("demo1234"))
-        .bind(cpf)
-        .bind(lat)
-        .bind(lng)
-        .execute(pool)
-        .await
-        .unwrap()
-        .last_insert_rowid();
-
-        let dog_id = sqlx::query(
-            "INSERT INTO dogs (owner_id, name, breed, birth_date, sex, in_heat, temperament, bites, likes, dislikes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(user_id)
-        .bind(dog)
-        .bind(breed)
-        .bind(birth)
-        .bind(sex)
-        .bind(heat)
-        .bind(temp)
-        .bind(bites)
-        .bind(likes)
-        .bind(dislikes)
-        .execute(pool)
-        .await
-        .unwrap()
-        .last_insert_rowid();
-
-        for vaccine in ["V10", "Antirrábica"] {
-            sqlx::query("INSERT INTO vaccines (dog_id, name, applied_on, next_due) VALUES (?, ?, ?, ?)")
-                .bind(dog_id)
-                .bind(vaccine)
-                .bind(&applied)
-                .bind(&next_year)
-                .execute(pool)
-                .await
-                .unwrap();
-        }
-        sqlx::query("INSERT INTO dog_events (dog_id, kind, description) VALUES (?, 'cadastro', ?)")
-            .bind(dog_id)
-            .bind(format!("{dog} foi cadastrado no All Love"))
-            .execute(pool)
-            .await
-            .unwrap();
-    }
+fn demo_enabled() -> bool {
+    std::env::var("SEED_DEMO").map(|v| v != "0").unwrap_or(true)
 }

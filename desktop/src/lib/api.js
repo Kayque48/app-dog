@@ -65,7 +65,8 @@ export async function openExternal(url) {
   window.open(url, '_blank', 'noreferrer');
 }
 
-export const imageUrl = (path) => (path ? `${API_URL}${path}` : null);
+/** Fotos enviadas ficam em "/uploads/..."; as de exemplo já vêm com a URL completa (Unsplash). */
+export const imageUrl = (path) => (!path ? null : path.startsWith('http') ? path : `${API_URL}${path}`);
 
 /** Endereço pelo CEP (ViaCEP). */
 export async function lookupCep(cep) {
@@ -125,3 +126,88 @@ export function vaccineText(s) {
 }
 
 export const today = () => new Date().toISOString().slice(0, 10);
+
+// ---------- eventos ----------
+
+export const eventKinds = {
+  desfile: { label: 'Desfile', icon: 'styler' },
+  corrida: { label: 'Corrida', icon: 'sprint' },
+  festa: { label: 'Festa', icon: 'celebration' },
+  encontro: { label: 'Encontro', icon: 'groups' },
+  concurso: { label: 'Concurso', icon: 'emoji_events' },
+  adocao: { label: 'Adoção', icon: 'volunteer_activism' },
+  competicao: { label: 'Competição', icon: 'fitness_center' },
+};
+
+const WEEK = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+const MONTH = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+/** "2026-11-14 15:00" -> { week: 'SÁB', day: '14', month: 'NOV', time: '15:00', countdown: 'em 3 dias' } */
+export function eventDate(startsAt) {
+  const d = new Date(startsAt.replace(' ', 'T'));
+  const days = Math.round((new Date(d.toDateString()) - new Date(new Date().toDateString())) / 86_400_000);
+  const countdown = days <= 0 ? 'hoje!' : days === 1 ? 'amanhã' : `em ${days} dias`;
+  return {
+    week: WEEK[d.getDay()],
+    day: String(d.getDate()).padStart(2, '0'),
+    month: MONTH[d.getMonth()],
+    time: startsAt.slice(11, 16),
+    countdown,
+    soon: days <= 2,
+  };
+}
+
+// ---------- perfil, carteira, serviços e loja ----------
+
+export const activityLevels = { baixo: 'Sossegado', medio: 'Moderado', alto: 'Elétrico' };
+export const lookingFor = { amizade: 'Amizade', cruzamento: 'Cruzamento', ambos: 'Amizade e cruzamento' };
+export const docKinds = { pedigree: 'Pedigree', exame: 'Exame', rg: 'RG animal', receita: 'Receita', outro: 'Outro' };
+export const providerKinds = {
+  veterinario: { label: 'Veterinários', icon: 'medical_services' },
+  banho_tosa: { label: 'Banho e tosa', icon: 'shower' },
+  pet_shop: { label: 'Pet shops', icon: 'storefront' },
+  adestrador: { label: 'Adestradores', icon: 'school' },
+  passeador: { label: 'Passeadores', icon: 'directions_walk' },
+  hotel: { label: 'Hotéis e creches', icon: 'hotel' },
+  criador: { label: 'Criadores', icon: 'workspace_premium' },
+  adocao: { label: 'Adoção', icon: 'volunteer_activism' },
+};
+export const productCategories = {
+  roupas: { label: 'Roupas', icon: 'checkroom' },
+  alimentos: { label: 'Alimentos', icon: 'restaurant' },
+  brinquedos: { label: 'Brinquedos', icon: 'sports_baseball' },
+  acessorios: { label: 'Acessórios', icon: 'pets' },
+  higiene: { label: 'Higiene', icon: 'soap' },
+};
+
+export const formatPrice = (cents) => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/** Link de WhatsApp para um telefone brasileiro com uma mensagem pronta. */
+export const whatsapp = (phone, text = '') => `https://wa.me/55${phone}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+
+/** "Au au!" sintetizado com a Web Audio API (não precisa de arquivo de som). */
+export function playBark() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const woof = (start) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      osc.type = 'sawtooth';
+      filter.type = 'lowpass';
+      filter.frequency.value = 1400;
+      osc.frequency.setValueAtTime(520, start);
+      osc.frequency.exponentialRampToValueAtTime(180, start + 0.18);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.5, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+      osc.connect(filter).connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.25);
+    };
+    woof(ctx.currentTime);
+    woof(ctx.currentTime + 0.32);
+  } catch {
+    /* navegador sem áudio: segue sem som */
+  }
+}

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { api, isLoggedIn, setToken } from './lib/api.js';
-  import { app, go, loadMe, updateLocation } from './lib/state.svelte.js';
+  import { app, go, loadCounts, loadMe, updateLocation } from './lib/state.svelte.js';
   import Login from './pages/Login.svelte';
   import Feed from './pages/Feed.svelte';
   import Discover from './pages/Discover.svelte';
@@ -12,21 +12,42 @@
   import Owner from './pages/Owner.svelte';
   import Profile from './pages/Profile.svelte';
   import Admin from './pages/Admin.svelte';
+  import Events from './pages/Events.svelte';
+  import EventDetail from './pages/EventDetail.svelte';
+  import Services from './pages/Services.svelte';
+  import Shop from './pages/Shop.svelte';
+  import Icon from './lib/Icon.svelte';
 
   const menu = [
-    ['feed', '📷 Feed'],
-    ['discover', '🐾 Descobrir'],
-    ['matches', '❤️ Encontros'],
-    ['places', '🌳 Parques'],
-    ['dogs', '🐶 Meus cães'],
-    ['profile', '👤 Perfil'],
+    ['feed', 'photo_library', 'Feed'],
+    ['discover', 'swipe', 'Descobrir'],
+    ['events', 'celebration', 'Eventos'],
+    ['matches', 'favorite', 'Encontros'],
+    ['places', 'park', 'Parques'],
+    ['services', 'medical_services', 'Serviços'],
+    ['shop', 'storefront', 'Loja'],
+    ['dogs', 'pets', 'Meus cães'],
+    ['profile', 'person', 'Perfil'],
   ];
+  // páginas de detalhe deixam o item de origem marcado
+  const section = $derived(
+    app.page === 'dog' ? 'dogs' : app.page === 'owner' ? 'matches' : app.page === 'event' ? 'events' : app.page,
+  );
 
-  onMount(async () => {
-    if (isLoggedIn()) {
-      await loadMe();
-      updateLocation();
-    }
+  onMount(() => {
+    (async () => {
+      if (isLoggedIn()) {
+        await loadMe();
+        updateLocation();
+      }
+    })();
+    // conteúdo sempre fresco: o contador de pedidos é atualizado a cada 20 s
+    const timer = setInterval(() => app.me && loadCounts(), 20_000);
+    return () => clearInterval(timer);
+  });
+  $effect(() => {
+    app.page; // recarrega o contador ao trocar de página
+    if (app.me) loadCounts();
   });
 
   async function logout() {
@@ -42,16 +63,25 @@
 {:else}
   <div class="layout">
     <nav>
-      <div class="brand">🐾 All Love</div>
-      {#each menu as [page, label]}
-        <button class:active={app.page === page} onclick={() => go(page)}>{label}</button>
+      <div class="brand">
+        <span class="logo shape-cookie9"><Icon name="pets" filled size={26} /></span>
+        <span class="display">All Love</span>
+      </div>
+      {#each menu as [page, icon, label]}
+        <button class="item" class:active={section === page} onclick={() => go(page)}>
+          <Icon name={icon} filled={section === page} /> <span class="grow label">{label}</span>
+          {#if page === 'matches' && app.counts.requests}<span class="badge">{app.counts.requests}</span>{/if}
+        </button>
       {/each}
       {#if app.me.is_admin}
-        <button class:active={app.page === 'admin'} onclick={() => go('admin')}>🛡️ Moderação</button>
+        <hr />
+        <button class="item" class:active={section === 'admin'} onclick={() => go('admin')}>
+          <Icon name="shield_person" filled={section === 'admin'} /> <span>Moderação</span>
+        </button>
       {/if}
       <div class="grow"></div>
       <div class="who">{app.me.name}</div>
-      <button onclick={logout}>Sair</button>
+      <button class="item" onclick={logout}><Icon name="logout" /> <span>Sair</span></button>
     </nav>
     <main>
       {#key app.page + app.param}
@@ -59,6 +89,10 @@
         {:else if app.page === 'discover'}<Discover />
         {:else if app.page === 'matches'}<Matches />
         {:else if app.page === 'places'}<Places />
+        {:else if app.page === 'events'}<Events />
+        {:else if app.page === 'services'}<Services />
+        {:else if app.page === 'shop'}<Shop />
+        {:else if app.page === 'event'}<EventDetail id={app.param} />
         {:else if app.page === 'dogs'}<MyDogs />
         {:else if app.page === 'dog'}<DogDetail id={app.param} />
         {:else if app.page === 'owner'}<Owner id={app.param} />
@@ -71,43 +105,98 @@
 {/if}
 
 {#if app.toast}
-  <div class="toast">{app.toast}</div>
+  <div class="snackbar" role="status">{app.toast}</div>
 {/if}
 
 <style>
   .layout { display: flex; min-height: 100vh; }
+  /* Navigation drawer padrão do Material 3 */
   nav {
-    width: 220px;
+    width: 280px;
     flex-shrink: 0;
-    background: var(--blue);
+    background: var(--md-surface-container-low);
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 16px 12px;
+    padding: 12px;
     position: sticky;
     top: 0;
     height: 100vh;
   }
-  nav button { border: none; background: transparent; color: var(--white); text-align: left; font-size: 1.05rem; }
-  nav button.active, nav button:hover { background: rgba(255, 255, 255, 0.25); }
-  .brand { color: var(--white); font-size: 1.5rem; font-weight: bold; padding: 8px 12px 20px; }
-  .who { color: var(--white); padding: 0 12px; font-size: 0.9rem; }
-  main { flex: 1; padding: 24px 32px; max-width: 980px; }
-  .toast {
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--md-primary);
+    font-size: 30px;
+    line-height: 34px;
+    padding: 12px 12px 24px;
+  }
+  .logo {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    background: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    animation: spin 18s linear infinite;
+  }
+  .logo :global(.icon) { animation: spin 18s linear infinite reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .label { text-align: left; }
+  .item {
+    height: 56px;
+    border: none;
+    border-radius: 28px;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 24px 0 16px;
+    color: var(--md-on-surface-variant);
+  }
+  .item :global(.icon) { font-size: 24px; margin: 0; }
+  .item { font-size: 15px; transition: background 0.2s, transform 0.2s; }
+  .item:hover { transform: translateX(4px); }
+  .item.active { background: var(--md-primary-container); color: var(--md-on-primary-container); font-weight: 700; }
+  nav hr { margin: 8px 16px; }
+  .who { color: var(--md-on-surface-variant); padding: 0 16px 8px; font-size: 14px; }
+  main { flex: 1; padding: 16px 32px 32px; max-width: 1040px; min-width: 0; }
+  .snackbar {
     position: fixed;
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--text);
-    color: var(--white);
-    padding: 12px 20px;
-    border-radius: 12px;
-    max-width: 90vw;
+    background: var(--md-inverse-surface);
+    color: var(--md-inverse-on-surface);
+    padding: 14px 16px;
+    border-radius: 4px;
+    box-shadow: var(--md-elevation-3);
+    font-size: 14px;
+    line-height: 20px;
+    max-width: min(560px, 90vw);
+    z-index: 10;
   }
-  @media (max-width: 700px) {
+  /* telas estreitas: barra de navegação embaixo */
+  @media (max-width: 760px) {
     .layout { flex-direction: column; }
-    nav { width: auto; height: auto; position: static; flex-direction: row; flex-wrap: wrap; }
-    .brand, .who, .grow { display: none; }
-    main { padding: 16px; }
+    main { padding: 16px 16px 96px; }
+    nav {
+      position: fixed;
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: auto;
+      height: 80px;
+      flex-direction: row;
+      padding: 12px 4px 16px;
+      background: var(--md-surface-container);
+      z-index: 5;
+      overflow-x: auto;
+    }
+    .brand, .who, .grow, nav hr { display: none; }
+    .item { flex: 1; flex-direction: column; height: 52px; padding: 0 4px; gap: 4px; font-size: 12px; border-radius: 16px; min-width: 64px; }
+    .item.active { background: transparent; }
+    .item.active :global(.icon) { background: var(--md-primary-container); border-radius: 16px; padding: 4px 20px; }
+    .item .badge { position: absolute; top: 2px; right: 12px; }
+    .item:hover { transform: none; }
   }
 </style>

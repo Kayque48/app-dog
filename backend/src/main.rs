@@ -2,6 +2,7 @@
 
 mod auth;
 mod db;
+mod demo;
 mod error;
 mod routes;
 mod rules;
@@ -40,7 +41,7 @@ async fn main() {
     let app = Router::new()
         .nest("/api", routes::router())
         .nest_service("/uploads", ServeDir::new(upload_dir))
-        .layer(DefaultBodyLimit::max(6 * 1024 * 1024))
+        .layer(DefaultBodyLimit::max(26 * 1024 * 1024))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state);

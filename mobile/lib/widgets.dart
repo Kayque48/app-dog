@@ -11,10 +11,8 @@ void showError(BuildContext context, Object error) {
   final message = error.toString();
   if (error is ApiException && (error.status == 401 || message.startsWith('Conta bloqueada'))) {
     Api.instance.forgetToken();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LoginScreen(initialMessage: message)),
-      (_) => false,
-    );
+    Navigator.of(context)
+        .pushAndRemoveUntil(MaterialPageRoute(builder: (_) => LoginScreen(initialMessage: message)), (_) => false);
     return;
   }
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -47,6 +45,71 @@ Future<Position?> updateMyLocation(BuildContext context) async {
   }
 }
 
+/// "Deu certo" em azul: o cão não enxerga verde.
+Color successColor(BuildContext context) => Theme.of(context).colorScheme.primary;
+Color successContainer(BuildContext context) => Theme.of(context).colorScheme.primaryContainer;
+
+/// Formas do Material 3 Expressive (cookie, flor e "blob").
+abstract final class Shapes {
+  static const cookie9 = StarBorder(points: 9, innerRadiusRatio: 0.84, pointRounding: 0.5, valleyRounding: 0.5);
+  static const cookie12 = StarBorder(points: 12, innerRadiusRatio: 0.88, pointRounding: 0.5, valleyRounding: 0.5);
+  static const flower = StarBorder(points: 6, innerRadiusRatio: 0.72, pointRounding: 0.7, valleyRounding: 0.3);
+  static const blob = StarBorder(
+    points: 3,
+    innerRadiusRatio: 0.78,
+    pointRounding: 0.5,
+    valleyRounding: 0.5,
+    rotation: 20,
+  );
+  static const all = [cookie9, flower, cookie12, blob];
+}
+
+/// Recorta o filho numa forma expressiva.
+class Shaped extends StatelessWidget {
+  const Shaped({super.key, required this.shape, required this.child, this.size});
+  final ShapeBorder shape;
+  final Widget child;
+  final double? size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: ClipPath(
+      clipper: ShapeBorderClipper(shape: shape),
+      child: child,
+    ),
+  );
+}
+
+/// Foto (ou pata) do cão recortada numa forma, usada em stories e cartões.
+class ShapedDog extends StatelessWidget {
+  const ShapedDog({super.key, required this.photoUrl, required this.shape, this.size = 72});
+  final String? photoUrl;
+  final ShapeBorder shape;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final url = Api.imageUrl(photoUrl);
+    final paw = Icon(Icons.pets, size: size * 0.45, color: scheme.onPrimaryContainer);
+    return Shaped(
+      shape: shape,
+      size: size,
+      child: ColoredBox(
+        color: scheme.primaryContainer,
+        child: url == null
+            ? Center(child: paw)
+            : Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Center(child: paw),
+              ),
+      ),
+    );
+  }
+}
+
 class DogAvatar extends StatelessWidget {
   const DogAvatar({super.key, required this.photoUrl, this.radius = 24});
   final String? photoUrl;
@@ -59,6 +122,7 @@ class DogAvatar extends StatelessWidget {
       radius: radius,
       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       backgroundImage: url == null ? null : NetworkImage(url),
+      onBackgroundImageError: url == null ? null : (_, _) {},
       child: url == null ? Icon(Icons.pets, size: radius) : null,
     );
   }
@@ -78,8 +142,13 @@ class DogPhoto extends StatelessWidget {
       width: double.infinity,
       color: Theme.of(context).colorScheme.primaryContainer,
       child: url == null
-          ? Icon(Icons.pets, size: height / 3, color: Colors.white)
-          : Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.broken_image)),
+          ? Icon(Icons.pets, size: height / 3, color: Theme.of(context).colorScheme.onPrimaryContainer)
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  Icon(Icons.pets, size: height / 3, color: Theme.of(context).colorScheme.onPrimaryContainer),
+            ),
     );
   }
 }
@@ -98,23 +167,29 @@ class _AdBannerState extends State<AdBanner> {
   @override
   void initState() {
     super.initState();
-    Api.instance.get('/ads/random').then((data) {
-      if (mounted) setState(() => _ad = data['ad']);
-    }).catchError((_) {});
+    Api.instance
+        .get('/ads/random')
+        .then((data) {
+          if (mounted) setState(() => _ad = data['ad']);
+        })
+        .catchError((_) {});
   }
 
   @override
   Widget build(BuildContext context) {
     final ad = _ad;
     if (ad == null) return const SizedBox.shrink();
-    return Card(
-      color: const Color(0xFFFFF8E1),
+    final scheme = Theme.of(context).colorScheme;
+    return Card.filled(
+      color: scheme.tertiaryContainer,
       margin: const EdgeInsets.all(8),
       child: ListTile(
+        iconColor: scheme.onTertiaryContainer,
+        textColor: scheme.onTertiaryContainer,
         leading: const Icon(Icons.storefront),
         title: Text(ad['sponsor']),
         subtitle: Text(ad['message']),
-        trailing: const Text('Anúncio', style: TextStyle(fontSize: 11, color: Colors.black54)),
+        trailing: Text('Anúncio', style: Theme.of(context).textTheme.labelSmall),
       ),
     );
   }
@@ -127,8 +202,12 @@ class Constrained extends StatelessWidget {
   final double maxWidth;
 
   @override
-  Widget build(BuildContext context) =>
-      Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child));
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    ),
+  );
 }
 
 class EmptyState extends StatelessWidget {
@@ -139,14 +218,17 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
-            if (action != null) ...[const SizedBox(height: 16), action!],
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 16),
+          Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+          if (action != null) ...[const SizedBox(height: 16), action!],
+        ],
+      ),
+    ),
+  );
 }

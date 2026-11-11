@@ -1,9 +1,11 @@
 <script>
   import { onMount } from 'svelte';
   import { api, formatDistance, openExternal, placeKinds } from '../lib/api.js';
-  import { showError, toast } from '../lib/state.svelte.js';
+  import { go, showError, toast } from '../lib/state.svelte.js';
   import AdBanner from '../lib/AdBanner.svelte';
+  import Icon from '../lib/Icon.svelte';
 
+  const kindIcon = { parque: 'park', praca: 'nature_people', ponto_encontro: 'location_on' };
   let places = $state(null);
   let error = $state(null);
   let form = $state({ name: '', kind: 'ponto_encontro', address: '' });
@@ -23,32 +25,41 @@
     try {
       await api('POST', '/places', { ...form, lat: me.lat, lng: me.lng });
       form = { name: '', kind: 'ponto_encontro', address: '' };
+      toast('Ponto de encontro salvo');
       load();
     } catch (err) { showError(err); }
   }
 </script>
 
-<h1>Parques e pontos de encontro</h1>
+<div class="page-header"><h1>Parques e pontos de encontro</h1></div>
 <p class="muted">Os 5 locais mais perto de você.</p>
 
 {#if error}
-  <p class="empty bad">{error}</p>
+  <div class="empty">
+    <Icon name="location_off" />
+    <p>{error}</p>
+    <button class="primary" onclick={() => go('profile')}>Definir localização</button>
+  </div>
 {:else if places}
-  {#each places as p (p.id)}
-    <div class="card row">
-      <span style="font-size:2rem">{p.kind === 'parque' ? '🌳' : '📍'}</span>
-      <div class="grow">
-        <strong>{p.name}</strong> <span class="chip">{placeKinds[p.kind]}</span><br />
-        <small class="muted">{formatDistance(p.distance_m)} • {p.address}</small>
+  <div class="card outlined list">
+    {#each places as p (p.id)}
+      <div class="list-item">
+        <div class="leading"><Icon name={kindIcon[p.kind]} /></div>
+        <div class="grow">
+          <div>{p.name}</div>
+          <small class="muted">{placeKinds[p.kind]} · {formatDistance(p.distance_m)} · {p.address}</small>
+        </div>
+        <button class="text" onclick={() => openExternal(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`)}>
+          <Icon name="map" /> Mapa
+        </button>
       </div>
-      <button onclick={() => openExternal(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`)}>Abrir no mapa</button>
-    </div>
-  {/each}
+    {/each}
+  </div>
 {/if}
 
 <AdBanner />
 
-<form class="card" onsubmit={add}>
+<form class="card outlined" onsubmit={add}>
   <h3>Sugerir ponto de encontro</h3>
   <p class="muted">Será marcado na sua localização atual.</p>
   <div class="grid2">
@@ -60,5 +71,20 @@
     </label>
   </div>
   <label>Endereço / referência <input bind:value={form.address} /></label>
-  <button class="primary">Salvar</button>
+  <button class="primary"><Icon name="add_location_alt" /> Salvar</button>
 </form>
+
+<style>
+  .list { padding: 8px 16px; }
+  .list-item + .list-item { border-top: 1px solid var(--md-outline-variant); }
+  .leading {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+</style>

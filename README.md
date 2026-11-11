@@ -4,6 +4,8 @@ Rede social para cachorros, feita a partir da entrevista com o cliente. Os donos
 
 > Projeto de ensino. Não vai a público.
 
+📚 **Documentação completa:** na [wiki do repositório](https://github.com/Kayque48/app-dog/wiki) e em `docs/wiki/`, um vault do Obsidian (abra a pasta como cofre).
+
 ## Estrutura
 
 | Pasta      | O que é                     | Tecnologia                                   |
@@ -15,6 +17,10 @@ Rede social para cachorros, feita a partir da entrevista com o cliente. Os donos
 Os dois apps falam com a mesma API, então quem usa o celular encontra quem usa o computador.
 
 O desktop também tem o painel de **Moderação**, que aparece só para administradores.
+
+Os dois apps seguem o **Material 3 Expressive**: formas orgânicas ("cookie", flor e blob), títulos grandes na fonte Bricolage Grotesque, botões em pílula e animações. O feed foi pensado para ter sempre conteúdo novo: stories, um post em destaque, blocos misturados entre os posts ("perto de você", "parque do dia", pedidos de encontro, anúncio), curtida animada, coração gigante no toque duplo, rolagem infinita e aviso de fotos novas. O Descobrir termina com uma comemoração de match com confete.
+
+**Cores que o cachorro enxerga.** Cães são dicromatas: só têm cones para azul-violeta e amarelo, e vermelho e verde viram um marrom acinzentado para eles. Por isso a paleta inteira usa só azul, amarelo, violeta e neutros. Até o "erro" é amarelo e o "sucesso" é azul. O azul fraquinho que o cliente pediu continua presente como cor de fundo dos cartões. A paleta tem tema claro e escuro e fica em `mobile/lib/main.dart` e em `desktop/src/app.css`.
 
 ## Do pedido do cliente para o app
 
@@ -31,8 +37,33 @@ O desktop também tem o painel de **Moderação**, que aparece só para administ
 | Histórico do cão e de quais cães o dono já teve                      | Histórico no perfil do cão (cadastro, vacinas, encontros, incidentes) e perfil do dono com cães atuais e antigos |
 | Grátis com anúncios de pet shops / premium sem anúncios              | Banner de patrocinador. O interruptor "Premium" no Perfil tira os anúncios (pagamento ainda não definido pelo cliente) |
 | Mobile e tablet                                                      | Flutter com layout de tablet (menu lateral)                                                  |
-| Cores azul fraquinho e branco                                        | Tema `#7EB6E6` / branco (cães enxergam bem o azul 😉)                                       |
+| Cores azul fraquinho e branco                                        | Paleta azul e amarela, as cores que o cachorro enxerga, mantendo o azul claro do cliente     |
 | LGPD                                                                 | Aceite dos termos no cadastro, exclusão de conta, CPF e telefone visíveis só para a moderação, localização exata nunca mostrada (só a distância) |
+
+## Funcionalidades extras (documento de funcionalidades)
+
+Além da entrevista, o grupo mandou um documento de funcionalidades. Entrou tudo que não conflita com o que o cliente pediu:
+
+| Funcionalidade | Como ficou |
+|---|---|
+| Perfil completo do cão | Peso, cor, descrição, nível de atividade e o que ele procura (amizade, cruzamento ou os dois) |
+| Pedigree | O dono envia o documento, a moderação verifica e o cão ganha o selo "Pedigree verificado" |
+| Carteira digital | Identidade pet (microchip, castração, peso, alergias, saúde), vacinas e documentos (pedigree, exames, RG animal, receitas). Os documentos só aparecem para o dono |
+| Match para cruzamento | No Descobrir, o modo "Cruzamento" mostra só cães do sexo oposto, não castrados e que também procuram cruzamento. Cão castrado não pode marcar cruzamento |
+| Som de latido no match | "Au au!" ao dar match (sintetizado no desktop, arquivo `au_au.wav` no mobile) |
+| Eventos | Desfiles, corridas, festas, encontros, concursos, **feiras de adoção** e **competições** (força, agilidade). Têm "Vou / Talvez", concurso com votação e pódio, e regras como "só fêmeas" ou "só Dachshund" |
+| Serviços | Veterinários, banho e tosa, pet shops, adestradores, passeadores, hotéis, criadores e ONGs de adoção, por distância. Têm ligar, WhatsApp, mapa e **agendamento** (o estabelecimento confirma por telefone). Qualquer um cadastra o próprio negócio e a moderação dá o selo de verificado |
+| Loja | Catálogo dos pet shops parceiros por categoria (roupas, alimentos, brinquedos, acessórios, higiene). A compra é combinada pelo WhatsApp ou pelo site da loja |
+| Feed | Fotos e **vídeos** (tocam sozinhos, sem som), curtidas e **comentários** |
+
+O que **não** entrou, por conflitar com a entrevista:
+
+| Item do documento | Motivo |
+|---|---|
+| Nome "Fatal Dog" | O cliente deu ao app o nome **All Love** |
+| Rastreamento do cão por dispositivo GPS | O cliente pediu segurança, e "pedir localização" foi um dos motivos de denúncia que ele citou. O app nunca mostra a posição exata de ninguém, só a distância aproximada. Além disso, exigiria um hardware |
+| Loja com pagamento dentro do app | O cliente quer ganhar com anúncios, patrocínio de pet shops e premium (ainda sem pagamento definido). Por isso a loja é um catálogo de parceiros |
+| Intermediação de cruzamento em clínicas | Virou um serviço que a clínica oferece ("Acompanhamento de cruzamento") e que o dono agenda como qualquer outro |
 
 ## Como rodar
 
@@ -47,10 +78,32 @@ cargo run
 
 A API sobe em `http://localhost:3000` e cria o banco `alllove.db` com dados de exemplo.
 
-| Conta                 | E-mail                | Senha      |
-|-----------------------|-----------------------|------------|
-| Administrador         | `admin@alllove.local` | `admin123` |
-| Donos de exemplo (Mel, Thor e Luna, perto do Ibirapuera) | `maria@demo.local`, `joao@demo.local`, `ana@demo.local` | `demo1234` |
+O administrador é `admin@alllove.local`, senha `admin123`.
+
+### Dados de exemplo
+
+Para dar uma noção do app funcionando, a API cria 8 donos com cães perto do Parque Ibirapuera, todos a menos de 500 m uns dos outros. A senha de todos é `demo1234`.
+
+| E-mail               | Cão                          | O que dá para ver com essa conta                                                     |
+|----------------------|------------------------------|--------------------------------------------------------------------------------------|
+| `joao@demo.local`    | Thor (Golden Retriever)      | Encontro já combinado com a Mel, pedido do Bento esperando resposta e 2 fotos no feed |
+| `maria@demo.local`   | Mel (Shih Tzu)               | Pedido da Pipoca para responder e a Nina em "cães que já tive"                       |
+| `ana@demo.local`     | Luna (vira-lata, no cio)     | Pedido enviado para o Bento                                                          |
+| `pedro@demo.local`   | Bento (Border Collie)        | Pedido enviado para o Thor e o da Luna para responder                                |
+| `beatriz@demo.local` | Pipoca (Pug)                 | Pedido enviado para a Mel                                                            |
+| `lucas@demo.local`   | Salsicha (Dachshund)         | Foto no feed                                                                         |
+| `rafaela@demo.local` | Bidu (Buldogue Francês)      | **Vacinas atrasadas**: o Bidu fica bloqueado no Descobrir                            |
+| `carlos@demo.local`  | Rex (vira-lata, agressivo)   | Incidente confirmado no histórico e uma denúncia aberta na moderação                 |
+
+O feed vem com 7 fotos, curtidas e comentários. Também vêm prontos:
+
+- **8 eventos**, entre eles o desfile de cadelas, a corrida de salsichas, a feira de adoção e o cabo de guerra.
+- **8 profissionais e estabelecimentos**: o "Passeios do Lucas" ainda espera verificação na moderação.
+- **7 produtos** na loja.
+- **Pedigrees:** o do Thor já está verificado e o do Bento espera análise.
+- **Um agendamento confirmado** para o Thor.
+
+Os parques de exemplo ficam em São Paulo; os anúncios, pet shops e clínicas são fictícios.
 
 Variáveis opcionais:
 
@@ -119,3 +172,24 @@ Estes pontos foram citados na entrevista, mas ainda estão em aberto com o clien
 - **Pagamento do premium.** Por enquanto é só um interruptor.
 - **Integração com uma carteira de vacinação oficial.** Hoje o dono registra as vacinas à mão.
 - **Capacidade de 20 a 50 mil acessos.** O SQLite atende bem uma turma. Para produção, a troca natural é PostgreSQL (o sqlx também suporta) e um servidor com vários núcleos.
+
+## Créditos das fotos
+
+As fotos dos dados de exemplo são do [Unsplash](https://unsplash.com) e são carregadas direto de lá, como pedem as [regras de uso do Unsplash](https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines).
+
+| Foto | Autor |
+|---|---|
+| Mel | [Adam Grabek](https://unsplash.com/@agmakonts) |
+| Thor | [Nick van der Vegt](https://unsplash.com/@nick_vandervegt) |
+| Luna | [Rafael Forseck](https://unsplash.com/@jpeg_therapy) |
+| Bento | [Anna Stampfli](https://unsplash.com/@annastampfli) |
+| Pipoca | [James Tiono](https://unsplash.com/@jamestiono) |
+| Salsicha | [Valdrin Maksutaj](https://unsplash.com/@volliem) |
+| Bidu | [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev) |
+| Rex | [Random Thinking](https://unsplash.com/@randomthinking) |
+| Nina | [Meagan Barr](https://unsplash.com/@megz_barr) |
+| Capas dos eventos | [Helena Lopes](https://unsplash.com/@helenalopesph), [Kojirou Sasaki](https://unsplash.com/@chelsea777), [Inc inductgroup](https://unsplash.com/@sofia_induct), [Paige Cody](https://unsplash.com/@paige_cody), [Ayla Verschueren](https://unsplash.com/@moob), [Xennie Moore](https://unsplash.com/@shadowseas), [Madeline Bowen](https://unsplash.com/@madelinebowen), [Nico Knaack](https://unsplash.com/@xoxnk) |
+| Produtos da loja | [Kariso ou](https://unsplash.com/@karisou), [Hugo Michael](https://unsplash.com/@toolsuite12), [Giacomo Lucarini](https://unsplash.com/@lucarinigiac) |
+| Fotos do feed | [keila Paludo](https://unsplash.com/@keilapaludo), [Jackie Best](https://unsplash.com/@bugsandslugs), [Denis Bayer](https://unsplash.com/@denisbayer), [Mikhail Mamaev](https://unsplash.com/@mikhail_mamaev), [David Valentine](https://unsplash.com/@thephotochad), [Gosia Jamrozik](https://unsplash.com/@gosiaj), [yu wang](https://unsplash.com/@boboguai2) |
+
+A fonte [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) usa a licença SIL Open Font License (`mobile/assets/fonts/BricolageGrotesque-OFL.txt`).

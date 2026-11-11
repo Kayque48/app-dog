@@ -40,6 +40,8 @@ async fn ensure_vaccinated(state: &AppState, dog: &DogRow) -> AppResult<()> {
 pub struct DiscoverQuery {
     dog_id: i64,
     radius_m: Option<f64>,
+    /// "cruzamento" mostra só cães do sexo oposto, não castrados, que também procuram cruzamento.
+    goal: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -74,6 +76,13 @@ pub async fn discover(
         return Err(AppError::bad("Ative a localização para encontrar cães por perto"));
     };
     let radius = q.radius_m.unwrap_or(rules::DEFAULT_RADIUS_M).clamp(100.0, 20_000.0);
+    let breeding = q.goal.as_deref() == Some("cruzamento");
+    if breeding && (my_dog.neutered || my_dog.looking_for == "amizade") {
+        return Err(AppError::bad(format!(
+            "Para procurar cruzamento, marque no perfil de {} que ele procura cruzamento (e não é castrado).",
+            my_dog.name
+        )));
+    }
 
     // Primeiro um filtro rápido por "quadrado" no SQL, depois a distância exata em Rust.
     let dlat = radius / 111_320.0;
@@ -107,6 +116,9 @@ pub async fn discover(
         let view = dog_view(&state.db, c.dog).await?;
         if !view.vaccine_status.up_to_date {
             continue; // cães com vacina atrasada não aparecem para ninguém
+        }
+        if breeding && (view.dog.sex == my_dog.sex || view.dog.neutered || view.dog.looking_for == "amizade") {
+            continue;
         }
         cards.push(Card {
             dog: view,

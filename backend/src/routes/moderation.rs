@@ -227,3 +227,81 @@ async fn ban(db: &SqlitePool, user_id: i64, reason: &str) -> AppResult<()> {
     sqlx::query("DELETE FROM sessions WHERE user_id = ?").bind(user_id).execute(db).await?;
     Ok(())
 }
+
+// ---------- pedigrees e profissionais aguardando verificação ----------
+
+#[derive(FromRow, Serialize)]
+pub struct PendingDocument {
+    id: i64,
+    title: String,
+    file_url: String,
+    created_at: String,
+    dog_id: i64,
+    dog_name: String,
+    dog_breed: String,
+    owner_name: String,
+}
+
+pub async fn pending_pedigrees(State(state): State<AppState>, _admin: AdminUser) -> AppResult<Json<Vec<PendingDocument>>> {
+    let rows = sqlx::query_as(
+        "SELECT x.id, x.title, x.file_url, x.created_at, d.id AS dog_id, d.name AS dog_name, d.breed AS dog_breed,
+                u.name AS owner_name
+         FROM dog_documents x JOIN dogs d ON d.id = x.dog_id JOIN users u ON u.id = d.owner_id
+         WHERE x.kind = 'pedigree' AND x.status = 'enviado' ORDER BY x.id",
+    )
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(rows))
+}
+
+#[derive(Deserialize)]
+pub struct ReviewInput {
+    approved: bool,
+}
+
+pub async fn review_pedigree(
+    State(state): State<AppState>,
+    _admin: AdminUser,
+    Path(id): Path<i64>,
+    Json(input): Json<ReviewInput>,
+) -> AppResult<Json<Value>> {
+    let row: Option<(i64,)> = sqlx::query_as("SELECT dog_id FROM dog_documents WHERE id = ? AND kind = 'pedigree'")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
+    let (dog_id,) = row.ok_or_else(|| AppError::not_found("Pedigree não encontrado"))?;
+    sqlx::query("UPDATE dog_documents SET status = ? WHERE id = ?")
+        .bind(if input.approved { "verificado" } else { "recusado" })
+        .bind(id)
+        .execute(&state.db)
+        .await?;
+    add_event(
+        &state.db,
+        dog_id,
+        "pedigree",
+        if input.approved { "Pedigree verificado pela moderação" } else { "Pedigree recusado pela moderação" },
+    )
+    .await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(FromRow, Serialize)]
+pub struct PendingProvider {
+    id: i64,
+    name: String,
+    kind: String,
+    phone: String,
+    address: String,
+    services: String,
+    owner_name: Option<String>,
+}
+
+pub async fn pending_providers(State(state): State<AppState>, _admin: AdminUser) -> AppResult<Json<Vec<PendingProvider>>> {
+    let rows = sqlx::query_as(
+        "SELECT p.id, p.name, p.kind, p.phone, p.address, p.services, u.name AS owner_name
+         FROM providers p LEFT JOIN users u ON u.id = p.owner_id WHERE p.verified = 0 ORDER BY p.id",
+    )
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(rows))
+}

@@ -16,6 +16,9 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
-    "@tauri-apps/plugin-opener": "^2.7.3"
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource/roboto": "^5.3.0",
+    "@tauri-apps/plugin-opener": "^2.7.3",
+    "material-symbols": "^0.31.9"
   }
 }
